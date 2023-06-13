@@ -7,11 +7,9 @@ class DatabaseFileScanner
     @file = File.open(database_file_path, "rb")
   end
 
-  # This returns only the page size currently.
-  def dbinfo
+  def header_info
     @file.seek(HEADER_PAGE_SIZE_OFFSET)
     page_size = @file.read(HEADER_PAGE_SIZE_LENGTH).unpack("n")[0]
-    { page_size: page_size }
+    Database::HeaderInfo.new(page_size: page_size)
   end
-
 end
