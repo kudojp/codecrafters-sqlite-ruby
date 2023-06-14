@@ -1,15 +1,15 @@
 class DatabaseFileScanner
   HEADER_LENGTH = 100 # bytes
-  HEADER_PAGE_SIZE_OFFSET = 16
-  HEADER_PAGE_SIZE_LENGTH = 2
+  PAGE_SIZE_OFFSET_IN_HEADER = 16
+  PAGE_SIZE_LENGTH_IN_HEADER = 2
 
   def initialize(database_file_path)
     @file = File.open(database_file_path, "rb")
   end
 
   def get_header_info
-    @file.seek(HEADER_PAGE_SIZE_OFFSET)
-    page_size = @file.read(HEADER_PAGE_SIZE_LENGTH).unpack("n")[0]
+    @file.seek(PAGE_SIZE_OFFSET_IN_HEADER)
+    page_size = @file.read(PAGE_SIZE_LENGTH_IN_HEADER).unpack("n")[0]
     Database::HeaderInfo.new(page_size: page_size)
   end
 
