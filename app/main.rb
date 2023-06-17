@@ -10,7 +10,10 @@ case command
 when ".dbinfo"
   header_info = scanner.get_header_info
   puts "database page size: #{header_info.page_size}"
-  
+
   sqlite_schema = scanner.get_sqlite_schema
   puts "number of tables: #{sqlite_schema.cnt_tables}"
+when ".tables"
+  sqlite_schema = scanner.get_sqlite_schema
+  puts sqlite_schema.tables.join " "
 end
