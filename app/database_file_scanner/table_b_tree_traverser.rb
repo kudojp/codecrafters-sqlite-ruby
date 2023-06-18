@@ -30,6 +30,14 @@ class DatabaseFileScanner
       # TODO: go down the b-tree recursively.
     end
 
+    def get_records
+      # TODO: Delete me and implement this method.
+      return [
+        {type: "type1", name: "name1", tbl_name: "tbl_name1", rootpage: 111, sql: "sql1"},
+        {type: "type2", name: "name2", tbl_name: "tbl_name2", rootpage: 222, sql: "sql2"},
+      ]
+    end
+
     def file_offset_from_page_offset(page_index, page_offset)
       @page_size * page_index + page_offset
     end

@@ -15,5 +15,5 @@ when ".dbinfo"
   puts "number of tables: #{sqlite_schema.cnt_tables}"
 when ".tables"
   sqlite_schema = scanner.get_sqlite_schema
-  puts sqlite_schema.tables.join " "
+  puts sqlite_schema.tables.map{|tbl| tbl.fetch(:name)}.join " "
 end

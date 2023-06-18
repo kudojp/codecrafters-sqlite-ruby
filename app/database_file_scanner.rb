@@ -20,6 +20,7 @@ class DatabaseFileScanner
     sqlite_schema = Database::SqliteSchema.new
 
     sqlite_schema.cnt_tables = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER).cnt_records
+    sqlite_schema.tables = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER).get_records
     sqlite_schema
   end
 
