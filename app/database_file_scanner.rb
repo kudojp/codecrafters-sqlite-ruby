@@ -38,10 +38,11 @@ class DatabaseFileScanner
   end
 
   def get_sqlite_schema
-    sqlite_schema = Database::SqliteSchema.new
+    traverser = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER, Database::SqliteSchema::TABLE_ATTRIBUTES)
 
-    sqlite_schema.cnt_tables = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER, Database::SqliteSchema::TABLE_ATTRIBUTES).cnt_records
-    sqlite_schema.tables = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER, Database::SqliteSchema::TABLE_ATTRIBUTES).get_records
+    sqlite_schema = Database::SqliteSchema.new
+    sqlite_schema.cnt_tables = traverser.cnt_records
+    sqlite_schema.tables = traverser.get_records
     sqlite_schema
   end
 end
