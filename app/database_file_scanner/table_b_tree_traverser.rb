@@ -50,11 +50,11 @@ class DatabaseFileScanner
 
       if page_type == 0x0d # a leaf table b-tree page
         self.append_records_in_leaf_table_node(@root_page_index)
+        return @records
       end
 
       # TODO: diverge and go down till it reaches all the leaves.
-
-      @records
+      raise StandardError.new("Not implemented yet!")
     end
 
     private
@@ -96,7 +96,7 @@ class DatabaseFileScanner
         record = {}
         # Value encodings for each column
         col_to_serial_type.each do |col, (used_bytes, read_lambda)|
-          @file.seek(curr_offset)
+          @file.seek(file_offset_from_page_offset(page_index, curr_offset))
           col_value = read_lambda.call(@file)
           record[col] = col_value
           curr_offset += used_bytes
@@ -114,6 +114,7 @@ class DatabaseFileScanner
         return byte_length, lambda{|file| file.read(byte_length).unpack("a*")[0]}
       end
 
+      # text
       if (13 <= serial_type) && (serial_type % 2 == 1)
         byte_length = (serial_type-13)/2
         return byte_length, lambda{|file| file.read(byte_length).unpack("a*")[0]}
@@ -121,6 +122,7 @@ class DatabaseFileScanner
 
       # TODO: add key=0~11 here.
       mapping = {
+        0 => [0, lambda{|_file| nil}],
         1 => [1, lambda{|file| file.read(byte_length).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
       }
       mapping.fetch(serial_type)
