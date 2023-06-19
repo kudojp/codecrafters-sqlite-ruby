@@ -18,11 +18,19 @@ when ".tables"
   puts sqlite_schema.tables.map{|tbl| tbl.fetch(:name)}.join " "
 else
   # Assuming that the command is "SELECT xxx FROM yyy;"
-  _, column_name, _, table_name = command.split(" ")
-  case column_name.downcase
-  when "count(*)"
+  matches = /(?i)select(?-i) (?<columns>.+) +(?i)from(?-i) +(?<table_name>\S+)/.match command
+  columns = matches[:columns]
+  table_name = matches[:table_name]
+
+  if columns == "count(*)"
     puts scanner.count_records(table_name)
-  else
-    puts scanner.get_records(table_name).map{|record| record.fetch(column_name)}
+    return
   end
+
+  records = scanner.get_records(table_name)
+
+  # columns = `col, col2, col3`
+  column_names = columns.split(",").map(&:strip)
+  select_cols = lambda{|record| column_names.map{|col| record.fetch(col)}.join "|"}
+  puts records.map{|record| select_cols.call(record)}.join "\n"
 end
