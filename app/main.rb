@@ -17,7 +17,12 @@ when ".tables"
   sqlite_schema = scanner.sqlite_schema
   puts sqlite_schema.tables.map{|tbl| tbl.fetch(:name)}.join " "
 else
-  # Assuming that th command is "SELECT COUNT(*) FROM my_table;"
-  table_name = command.split(" ")[3]
-  puts scanner.count_records(table_name)
+  # Assuming that the command is "SELECT xxx FROM yyy;"
+  _, column_name, _, table_name = command.split(" ")
+  case column_name.downcase
+  when "count(*)"
+    puts scanner.count_records(table_name)
+  else
+    puts scanner.get_records(table_name).map{|record| record.fetch(column_name)}
+  end
 end
