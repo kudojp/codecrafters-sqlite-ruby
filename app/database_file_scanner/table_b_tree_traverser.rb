@@ -6,7 +6,7 @@ class DatabaseFileScanner
     NUM_CELLS_LENGTH_IN_PAGE = 2
     HEADER_LENGTH_IN_LEAF_PAGE = 8
 
-    def initialize(file, page_size, root_page_index, columns)
+    def initialize(file, page_size, root_page_index, columns=nil)
       @file = file
       @page_size = page_size
       @root_page_index = root_page_index
@@ -37,6 +37,8 @@ class DatabaseFileScanner
     #   {type: "type2", name: "name2", tbl_name: "tbl_name2", rootpage: 222, sql: "sql2"},
     # ]
     def get_records
+      raise StandardError.new("Set columns when initializing this scanner to call #get_records") unless @columns
+
       @records = [] # TODO: This should not be a instance variable if we use this scanner multiple times.
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if @root_page_index == 1 # pages are 1-indexed.

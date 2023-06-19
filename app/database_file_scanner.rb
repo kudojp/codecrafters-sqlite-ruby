@@ -23,12 +23,7 @@ class DatabaseFileScanner
     table_info = self.sqlite_schema.tables.find{|tbl| tbl.fetch(:name) == table_name}
     table_root_page_index = table_info.fetch(:rootpage)
 
-    TableBTreeTraverser.new(
-      @file,
-      self.page_size,
-      table_root_page_index,
-      nil
-    ).cnt_records
+    TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).cnt_records
   end
 
   private
