@@ -5,7 +5,7 @@ class DatabaseFileScanner
   HEADER_LENGTH = 100 # bytes
   PAGE_SIZE_OFFSET_IN_FILE_HEADER = 16
   PAGE_SIZE_LENGTH_IN_FILE_HEADER = 2
-  SQLITE_SCHEMA_PAGE_NUMBER = 0
+  SQLITE_SCHEMA_PAGE_NUMBER = 1
 
   def initialize(database_file_path)
     @file = File.open(database_file_path, "rb")
