@@ -15,7 +15,7 @@ class DatabaseFileScanner
 
     def cnt_records
       first_offset = @page_size * @root_page_index
-      first_offset += HEADER_LENGTH if @root_page_index == 0 
+      first_offset += HEADER_LENGTH if @root_page_index == 0
 
       page_typ_offset = first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE
       @file.seek(self.file_offset_from_page_offset(@root_page_index, page_typ_offset))
@@ -25,7 +25,7 @@ class DatabaseFileScanner
 
       if page_type == 0x0d # a leaf table b-tree page
         @file.seek(file_offset_from_page_offset(@root_page_index, first_offset + NUM_CELLS_OFFSET_IN_PAGE))
-        num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)      
+        num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
         return num_cells
       end
 
