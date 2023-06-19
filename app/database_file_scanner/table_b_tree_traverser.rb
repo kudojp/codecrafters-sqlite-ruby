@@ -4,6 +4,7 @@ class DatabaseFileScanner
     BTREE_PAGE_TYPE_LENGTH_IN_PAGE = 1
     NUM_CELLS_OFFSET_IN_PAGE = 3
     NUM_CELLS_LENGTH_IN_PAGE = 2
+    HEADER_LENGTH_IN_LEAF_PAGE = 8
 
     def initialize(file, page_size, root_page_index, columns)
       @file = file
@@ -60,43 +61,71 @@ class DatabaseFileScanner
     private
 
     def append_records_in_leaf_table_node(page_index)
-      first_offset = @page_size * @root_page_index
-      first_offset += HEADER_LENGTH if @root_page_index == 0
+      first_offset = @page_size * page_index
+      first_offset += HEADER_LENGTH if page_index == 0
+      @file.seek(file_offset_from_page_offset(page_index, first_offset))
 
-      num_cells = 12 # TODO: Fetch this from the offset 3-4 in this page header
-      # cell_content_area_offset = 24 # from first_offset   # TODO: Fetch this from the offset 5-6 in this page header
+      @file.seek(self.file_offset_from_page_offset(page_index, first_offset + NUM_CELLS_OFFSET_IN_PAGE))
+      num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
+      # For each record,,,
       num_cells.times do |nth_cell|
-        cell_pointer_offset = 12 + nth_cell * 2
-        @file.seek(file_offset_from_page_offset(@root_page_index, first_offset + cell_pointer_offset))
+        cell_pointer_offset = HEADER_LENGTH_IN_LEAF_PAGE + nth_cell * 2 # from first_offset
+        @file.seek(file_offset_from_page_offset(page_index, first_offset + cell_pointer_offset))
+        # This cell_offset is from index=0 in this page, not from first_offset.
         cell_offset = @file.read(2).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
-        @file.seek(file_offset_from_page_offset(@root_page_index, first_offset + cell_offset))
-        # read 1st var-int = #bytes in this cell
-        # read 2st var-int = row id
+        cell_payload_size_offset = cell_offset # from index=0 in this page
+        _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
+        cell_row_id_offset = cell_payload_size_offset + used_bytes
 
-        cell_payload_offset = cell_offset + 2 # or more
+        _row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_row_id_offset)).read
+        cell_payload_offset = cell_row_id_offset + used_bytes
+
+        cell_payload_offset += 1 # I don't know what this 1 byte is.
 
         col_to_serial_type = {}
+        curr_offset = cell_payload_offset
 
+        # Type encodings for each column
         @columns.each_with_index do |col_name, nth_col|
-          # type encoding
-          col_serial_type_offset = cell_payload_offset + nth_col * 1 # assuming that there is no super long BLOB/TEXT
-          @file.seek(file_offset_from_page_offset(@root_page_index, first_offset + col_serial_type_offset))
-          col_serial_type = @file.read(1).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
-          col_to_serial_type[col_name] = col_serial_type
+          @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+          col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+          col_to_serial_type[col_name] = serial_type(col_serial_type)
+          curr_offset += used_bytes
         end
 
         record = {}
-
-        col_to_serial_type.each do |col, serial_type|
-          # read x bytes forward and convert it to the value (depending on serial_type)
-          col_value = "table_name_x"
+        # Value encodings for each column
+        col_to_serial_type.each do |col, (used_bytes, read_lambda)|
+          @file.seek(curr_offset)
+          col_value = read_lambda.call(@file)
           record[col] = col_value
+          curr_offset += used_bytes
         end
 
         @records << record
       end
+    end
+
+    # Returns an array of [bytes used for that value, lambda function to read from a given file]
+    def serial_type(serial_type)
+      # blob
+      if (12 <= serial_type) && (serial_type % 2 == 0)
+        byte_length = (serial_type-12)/2
+        return byte_length, lambda{|file| file.read(byte_length).unpack("a*")[0]}
+      end
+
+      if (13 <= serial_type) && (serial_type % 2 == 1)
+        byte_length = (serial_type-13)/2
+        return byte_length, lambda{|file| file.read(byte_length).unpack("a*")[0]}
+      end
+
+      # TODO: add key=0~11 here.
+      mapping = {
+        1 => [1, lambda{|file| file.read(byte_length).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
+      }
+      mapping.fetch(serial_type)
     end
 
     def file_offset_from_page_offset(page_index, page_offset)
