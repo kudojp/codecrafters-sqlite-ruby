@@ -1,0 +1,65 @@
+class SimplestSqlParser::Parser
+
+# ref. https://i.loveruby.net/ja/projects/racc/doc/grammar.html
+rule
+  # Each line should be formatted as:
+  # `target : pattern1 | pattern2 { action_block }`
+  #
+  # - pattern should be a composed of (`next_token[0]`, another target)
+  # - In action, substitute the generated AST node into `result` with `val[0] = next_token[1]`
+
+  # MEMO: The first line in the rule has a special meaning.only the program has to be finally reduced down into the first line.
+  # Every rule has to be reduced down to this target.
+  query : select_clause {result = AST::QueryNode.new(select_clause: val[0])}
+        | select_clause from_clause {result = AST::QueryNode.new(select_clause: val[0], from_clause: val[1])} # TODO: accept from, where, etc.
+        | select_clause from_clause where_clause {result = AST::QueryNode.new(select_clause: val[0], from_clause: val[1], where_clause: val[2])} # TODO: accept from, where, etc.
+
+  select_clause : SELECT selected_columns { result = AST::SelectClauseNode.new(selected_columns: val[1])} # TODO: accept multiple columns
+
+  selected_columns: selected_column { result = [val[0]] }
+                  | selected_columns COMMA selected_column { result = val[0] + [val[2]] }
+
+  selected_column : column_node { result = AST::SelectedColumnNode.new(col_def: val[0]) }
+                  | function_node { result = AST::SelectedColumnNode.new(col_def: val[0]) }
+
+  column_node : IDENTIFIER { result = AST::ColumnNode.new(type: :single_col, name: val[0])}
+              | ASTERISK { result = AST::ColumnNode.new(type: :asterisk, name: nil) }
+
+  function_node : COUNT PARENTHESIS_LEFT arg_node PARENTHESIS_RIGHT { result = AST::FunctionNode.new(type: :count, args: [val[2]])}
+  #           | MAX PARENTHESIS_LEFT IDENTIFIER PARENTHESIS_RIGHT {}
+
+  arg_node : column_node
+           | function_node
+
+  from_clause : FROM expression { result = AST::FromClauseNode.new(table: AST::TableNode.new(table_def: val[1])) }
+
+  where_clause : WHERE predicate { result = AST::WhereClauseNode.new(predicate: val[1])}
+
+  predicate : condition { result = [val[0]] }
+#             | predicate AND condition {}
+
+  condition : selected_column EQUALS expression { result = AST::ConditionNode.new(operator: :equals, left: val[0], right: val[2]) }
+#            | selected_column LARGER_THAN expression { result = AST::ConditionNode.new(operator: :equals, left: val[0], right: val[2]) }
+
+  expression : IDENTIFIER {result = AST::ExpressionNode.new(value: val[0])}
+
+---- header
+Dir[File.join(File.dirname(__FILE__), "ast/*.rb")].each {|file| require file }
+
+---- inner
+# innerの内容はそのまま生成されたparser.tab.rbファイル内のParserクラス内でmodule_evalされる。
+# ref. https://i.loveruby.net/ja/projects/racc/doc/parser.html#Racc%3a%3aParser-yyparse
+
+def initialize(query)
+  @scanner = SimplestSqlParser::LexicalScanner.new
+  @scanner.scan_setup(query)
+end
+
+# #next_token はここで必ず実装する必要がある。
+def next_token
+  @scanner.next_token
+end
+
+---- footer
+# footerの内容はそのまま生成されたparser.tab.rbファイルの下にコピーされる。
+# ruby parser.tab.rb で直にファイルを実行する際に Parserクラスを使って何かをするときなどに使える。
