@@ -1,0 +1,3 @@
+[submodule "simplest_sql_parser"]
+	path = simplest_sql_parser
+	url = git@github.com:kudojp/simplest_sql_parser.git
