@@ -26,7 +26,7 @@ class DatabaseFileScanner
         return num_cells
       end
 
-      if page_type == 0x05 # an intermediate table b-tree page
+      if page_type == 0x05 # an interior table b-tree page
         # TODO: go down the b-tree recursively.
         raise StandardError.new("Not implemented yet!")
       end
@@ -47,23 +47,23 @@ class DatabaseFileScanner
       @records
     end
 
-    def traverse_to_find_records(page)
+    def traverse_to_find_records(page_index)
       @records = [] # TODO: This should not be a instance variable if we use this scanner multiple times.
       first_offset = 0 # from the beginning of this page
-      first_offset += HEADER_LENGTH if @root_page_index == 1 # pages are 1-indexed.
+      first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
-      @file.seek(self.file_offset_from_page_offset(@root_page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
+      @file.seek(self.file_offset_from_page_offset(page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
       page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
       if page_type == 0x0d # a leaf table b-tree page
-        self.append_records_in_leaf_table_node(@root_page_index)
+        self.append_records_in_leaf_table_node(page_index)
         return @records
       end
 
-      if page_type == 0x05 # an intermediate table b-tree page
-        # TODO: go down the b-tree recursively.
-        next_page = 5 # TODO
-        traverse_to_find_records(next_page)
+      if page_type == 0x05 # an interior table b-tree page
+        child_page_indexes(page_index).each do |child_page_index|
+          self.traverse_to_find_records(child_page_index)
+        end
       end
 
       raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.")
@@ -116,6 +116,11 @@ class DatabaseFileScanner
 
         @records << record
       end
+    end
+
+    def child_page_indexes(page_index)
+      # TODO 
+      [1,2,3]
     end
 
     # Returns an array of [bytes used for that value, lambda function to read from a given file]
