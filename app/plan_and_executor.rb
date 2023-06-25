@@ -10,7 +10,7 @@ class PlanAndExecutor
     table_name = from_table.table_def.name # This can parse only the simplest case.
 
     # SELECT count(*)
-    if (selected_columns.length == 1) && (select_count_all? selected_columns[0])
+    if select_count_all?(selected_columns)
       return @db_file_scanner.count_records(table_name)
     end
 
@@ -26,8 +26,10 @@ class PlanAndExecutor
 
   private
 
-  def select_count_all?(selected_column_node)
-    selected_column_node.col_def == AST::FunctionNode.new(
+  def select_count_all?(selected_column_nodes)
+    return false unless selected_column_nodes.length == 1
+
+    selected_column_nodes[0].col_def == AST::FunctionNode.new(
       type: :count,
       args: [AST::ColumnNode.new(type: :asterisk, name: nil)]
     )
