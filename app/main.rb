@@ -20,7 +20,7 @@ when ".tables"
   puts sqlite_schema.tables.map{|tbl| tbl.fetch(:name)}.join " "
 else
   # TODO: replace with ast = SimplestSqlParser.parse(command)
-  ast = command
+  ast = SimplestSqlParser.parse(command)
   result = PlanAndExecutor.new(ast, db_file_scanner).execute
   puts result
 end
