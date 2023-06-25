@@ -16,10 +16,12 @@ class PlanAndExecutor
 
     records = @db_file_scanner.get_records(table_name)
 
+    # WHERE *
+    records = where_filtered(records, @ast.where_clause) if @ast.where_clause
+
     # SELECT col, col2, col3
     selected_column_names = selected_columns.map{|sel_col| sel_col.col_def.name }
-
-    return records.map{|record| record_str(record, selected_column_names)}
+    records.map{|record| record_str(record, selected_column_names)}
   end
 
   private
@@ -29,6 +31,22 @@ class PlanAndExecutor
       type: :count,
       args: [AST::ColumnNode.new(type: :asterisk, name: nil)]
     )
+  end
+
+  def where_filtered(records, where_clause_node)
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate&.length == 1
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].is_a? AST::ConditionNode
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].is_a? AST::ConditionNode
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].operator == :equals
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].left.is_a? AST::SelectedColumnNode
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].left.col_def.is_a? AST::ColumnNode
+    raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].right.is_a? AST::ExpressionNode
+
+    # WHERE col1 = 'value'
+    filtering_col_name = where_clause_node.predicate[0].left.col_def.name
+    filtering_col_value = where_clause_node.predicate[0].right.value
+
+    records.select{|record| record.fetch(filtering_col_name) == filtering_col_value}
   end
 
   def record_str(record, columns)
