@@ -62,16 +62,16 @@ class SimplestSqlParser::LexicalScanner < Racc::Parser
                   when (text = @ss.scan(/\s+/i))
                     ;
 
-                  when (text = @ss.scan(/SELECT/i))
+                  when (text = @ss.scan(/SELECT\b/i))
                      action { [:SELECT, text] }
 
-                  when (text = @ss.scan(/FROM/i))
+                  when (text = @ss.scan(/FROM\b/i))
                      action { [:FROM, text] }
 
-                  when (text = @ss.scan(/WHERE/i))
+                  when (text = @ss.scan(/WHERE\b/i))
                      action { [:WHERE, text] }
 
-                  when (text = @ss.scan(/COUNT/i))
+                  when (text = @ss.scan(/COUNT\b/i))
                      action { [:COUNT, text] }
 
                   when (text = @ss.scan(/,/i))

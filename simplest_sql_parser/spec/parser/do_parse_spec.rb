@@ -133,7 +133,7 @@ RSpec.describe SimplestSqlParser::Parser do
 
   context "when a query includes COUNT function" do
     it "generates the AST" do
-      ast = described_class.new("SELECT COUNT(*) FROM table WHERE id = 12.5").do_parse
+      ast = described_class.new("SELECT COUNT(*) FROM table WHERE country_id = 12.5").do_parse
       expect(ast).to eq(
         AST::QueryNode.new(
           select_clause: AST::SelectClauseNode.new(

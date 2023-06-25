@@ -19,12 +19,12 @@ rule
 
   # keywords
   ## keyword of statements
-  SELECT { [:SELECT, text] }
-  FROM { [:FROM, text] }
-  WHERE { [:WHERE, text] }
+  SELECT\b { [:SELECT, text] }
+  FROM\b { [:FROM, text] }
+  WHERE\b { [:WHERE, text] }
 
   ## keyword of functions
-  COUNT { [:COUNT, text] }
+  COUNT\b { [:COUNT, text] }
 
   # tokens
   ,   { [:COMMA, text] }
