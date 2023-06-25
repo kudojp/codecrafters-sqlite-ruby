@@ -5,8 +5,9 @@ option
   ignorecase
 macro
   BLANK \s+
-  WORD [a-zA-Z]\w*
   NUMBER \d+(\.\d+)?
+  WORD [a-zA-Z]\w*
+  LITERAL '.+'
 
 rule
   # Each line should be formatted as:
@@ -31,8 +32,8 @@ rule
   =   {[:EQUALS, text]}
   \(   {[:PARENTHESIS_LEFT, text]}
   \)   {[:PARENTHESIS_RIGHT, text]}
-  '    {[:SINGLE_QUOTE, text]}
 
   # identifiers
-  {WORD} { [:IDENTIFIER, text] }
+  {LITERAL} { [:IDENTIFIER, text[1...-1]] }
   {NUMBER} {[:IDENTIFIER, text.to_f]}
+  {WORD} { [:IDENTIFIER, text] }

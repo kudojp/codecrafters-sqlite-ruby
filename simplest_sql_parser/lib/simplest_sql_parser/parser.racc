@@ -48,7 +48,6 @@ rule
 #            | selected_column LARGER_THAN expression { result = AST::ConditionNode.new(operator: :equals, left: val[0], right: val[2]) }
 
   expression : IDENTIFIER {result = AST::ExpressionNode.new(value: val[0])}
-             | SINGLE_QUOTE IDENTIFIER SINGLE_QUOTE { result = AST::ExpressionNode.new(value: val[1].to_s)}
 
 ---- header
 Dir[File.join(File.dirname(__FILE__), "ast/*.rb")].each {|file| require file }

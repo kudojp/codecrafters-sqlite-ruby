@@ -170,7 +170,7 @@ RSpec.describe SimplestSqlParser::Parser do
   end
 
   # TODO: This is a known issue.
-  xcontext "WHEN an integer is surrounded by a single quote (e.g. '1212')" do
+  context "WHEN an integer is surrounded by a single quote (e.g. '1212')" do
     it "generates the AST" do
       ast = described_class.new("SELECT name, address FROM table WHERE phone_number = '1212'").do_parse
       expect(ast).to eq(
@@ -198,7 +198,7 @@ RSpec.describe SimplestSqlParser::Parser do
                   col_def: AST::ColumnNode.new(type: :single_col, name: "phone_number")
                 ),
                 right: AST::ExpressionNode.new(
-                  value: "1212" ################### -> This becomes "12.12" in a generated node.
+                  value: "1212"
                 )
               )
             ]

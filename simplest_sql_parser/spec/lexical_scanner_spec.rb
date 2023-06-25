@@ -45,7 +45,7 @@ RSpec.describe SimplestSqlParser::LexicalScanner do
 
   context "when a query includes WHERE statement" do
     it "tokenizes the query" do
-      scanner.scan_setup("SELECT name, address FROM table WHERE city = 'TOKYO'")
+      scanner.scan_setup("SELECT name, address FROM table WHERE city = 'TOKYO Kasai'")
       expect(scanner.next_token).to eq [:SELECT, "SELECT"]
       expect(scanner.next_token).to eq [:IDENTIFIER, "name"]
       expect(scanner.next_token).to eq [:COMMA, ","]
@@ -55,9 +55,7 @@ RSpec.describe SimplestSqlParser::LexicalScanner do
       expect(scanner.next_token).to eq [:WHERE, "WHERE"]
       expect(scanner.next_token).to eq [:IDENTIFIER, "city"]
       expect(scanner.next_token).to eq [:EQUALS, "="]
-      expect(scanner.next_token).to eq [:SINGLE_QUOTE, "'"]
-      expect(scanner.next_token).to eq [:IDENTIFIER, "TOKYO"]
-      expect(scanner.next_token).to eq [:SINGLE_QUOTE, "'"]
+      expect(scanner.next_token).to eq [:IDENTIFIER, "TOKYO Kasai"]
       expect(scanner.next_token).to eq nil
     end
   end
