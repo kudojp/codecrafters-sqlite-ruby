@@ -20,15 +20,18 @@ class DatabaseFileScanner
       @file.seek(self.file_offset_from_page_offset(@root_page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
       page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
-      raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.") unless [0x05, 0x0d].include?(page_type)
-
       if page_type == 0x0d # a leaf table b-tree page
         @file.seek(file_offset_from_page_offset(@root_page_index, first_offset + NUM_CELLS_OFFSET_IN_PAGE))
         num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
         return num_cells
       end
 
-      # TODO: go down the b-tree recursively.
+      if page_type == 0x05 # an intermediate table b-tree page
+        # TODO: go down the b-tree recursively.
+        raise StandardError.new("Not implemented yet!")
+      end
+
+      raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.") 
     end
 
     # Returns an array structured like:
@@ -39,6 +42,12 @@ class DatabaseFileScanner
     def get_records
       raise StandardError.new("Set columns when initializing this scanner to call #get_records") unless @columns
 
+      @records = []
+      traverse_to_find_records(@root_page_index)
+      @records
+    end
+
+    def traverse_to_find_records(page)
       @records = [] # TODO: This should not be a instance variable if we use this scanner multiple times.
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if @root_page_index == 1 # pages are 1-indexed.
@@ -46,15 +55,18 @@ class DatabaseFileScanner
       @file.seek(self.file_offset_from_page_offset(@root_page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
       page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
-      raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.") unless [0x05, 0x0d].include?(page_type)
-
       if page_type == 0x0d # a leaf table b-tree page
         self.append_records_in_leaf_table_node(@root_page_index)
         return @records
       end
 
-      # TODO: diverge and go down till it reaches all the leaves.
-      raise StandardError.new("Not implemented yet!")
+      if page_type == 0x05 # an intermediate table b-tree page
+        # TODO: go down the b-tree recursively.
+        next_page = 5 # TODO
+        traverse_to_find_records(next_page)
+      end
+
+      raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.")
     end
 
     private
