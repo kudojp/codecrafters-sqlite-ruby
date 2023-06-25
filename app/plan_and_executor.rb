@@ -19,7 +19,7 @@ class PlanAndExecutor
     # WHERE *
     records = where_filtered(records, @ast.where_clause) if @ast.where_clause
 
-    # SELECT col, col2, col3
+    # SELECT col1, col2, col3
     selected_column_names = selected_columns.map{|sel_col| sel_col.col_def.name }
     records.map{|record| record_str(record, selected_column_names)}
   end
@@ -50,6 +50,6 @@ class PlanAndExecutor
   end
 
   def record_str(record, columns)
-    columns.map{|col_name| record[col_name]}.join("|")
+    columns.map{|col_name| record.fetch(col_name)}.join("|")
   end
 end
