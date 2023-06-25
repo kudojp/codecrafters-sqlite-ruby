@@ -31,7 +31,7 @@ class DatabaseFileScanner
     table_root_page_index = table_info.fetch(:rootpage)
     column_names = table_info.fetch(:sql).split(Regexp.union(["(", ")"]))[1].split(",").map{|col_def| col_def.split()[0]}
 
-    TableBTreeTraverser.new(@file, self.page_size, table_root_page_index, column_names).get_records
+    TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).get_records(column_names)
   end
 
   private
@@ -46,11 +46,11 @@ class DatabaseFileScanner
   end
 
   def get_sqlite_schema
-    traverser = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER, Database::SqliteSchema::TABLE_ATTRIBUTES)
+    traverser = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER)
 
     sqlite_schema = Database::SqliteSchema.new
     sqlite_schema.cnt_tables = traverser.cnt_records
-    sqlite_schema.tables = traverser.get_records
+    sqlite_schema.tables = traverser.get_records(Database::SqliteSchema::TABLE_ATTRIBUTES)
     sqlite_schema
   end
 end

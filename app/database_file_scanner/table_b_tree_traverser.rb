@@ -9,11 +9,10 @@ class DatabaseFileScanner
     HEADER_LENGTH_IN_LEAF_PAGE = 8
     HEADER_LENGTH_IN_INTERIOR_PAGE = 12
 
-    def initialize(file, page_size, root_page_index, columns=nil)
+    def initialize(file, page_size, root_page_index)
       @file = file
       @page_size = page_size
       @root_page_index = root_page_index
-      @columns = columns
     end
 
     def cnt_records
@@ -42,8 +41,8 @@ class DatabaseFileScanner
     #   {type: "type1", name: "name1", tbl_name: "tbl_name1", rootpage: 111, sql: "sql1"},
     #   {type: "type2", name: "name2", tbl_name: "tbl_name2", rootpage: 222, sql: "sql2"},
     # ]
-    def get_records
-      raise StandardError.new("Set columns when initializing this scanner to call #get_records") unless @columns
+    def get_records(columns)
+      @columns = columns
 
       @records = []
       traverse_to_find_records(@root_page_index)
