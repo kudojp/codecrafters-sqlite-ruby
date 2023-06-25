@@ -19,7 +19,6 @@ when ".tables"
   sqlite_schema = db_file_scanner.sqlite_schema
   puts sqlite_schema.tables.map{|tbl| tbl.fetch(:name)}.join " "
 else
-  # TODO: replace with ast = SimplestSqlParser.parse(command)
   ast = SimplestSqlParser.parse(command)
   result = PlanAndExecutor.new(ast, db_file_scanner).execute
   puts result
