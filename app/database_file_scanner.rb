@@ -26,15 +26,8 @@ class DatabaseFileScanner
     TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).cnt_records
   end
 
-  def get_records(table_name)
-    table_info = self.sqlite_schema.tables.find{|tbl| tbl.fetch(:name) == table_name}
-    table_root_page_index = table_info.fetch(:rootpage)
-    # table_info is like:
-    #    "CREATE TABLE butterscotch (id integer primary key, grape text,coffee text,watermelon text,strawberry text,vanilla text)"
-    columns_defs = table_info.fetch(:sql).split(Regexp.union(["(", ")"]))[1].split(",")
-    column_names = columns_defs.map{|col_def| col_def.split()[0]}
-    col_primary_index_key = columns_defs.select{|col_def| col_def.include? "integer primary key"}[0].split()[0]
-
+  def get_records(table_name, filtering_cols=nil)
+    table_info, table_root_page_index, column_names, col_primary_index_key = get_table_metadata(table_name)
     TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).get_records(column_names, col_primary_index_key)
   end
 
@@ -56,5 +49,17 @@ class DatabaseFileScanner
     sqlite_schema.cnt_tables = traverser.cnt_records
     sqlite_schema.tables = traverser.get_records(Database::SqliteSchema::TABLE_ATTRIBUTES, nil)
     sqlite_schema
+  end
+
+  def get_table_metadata(table_name)
+    table_info = self.sqlite_schema.tables.find{|tbl| tbl.fetch(:name) == table_name}
+    table_root_page_index = table_info.fetch(:rootpage)
+    # table_info is like:
+    #    "CREATE TABLE butterscotch (id integer primary key, grape text,coffee text,watermelon text,strawberry text,vanilla text)"
+    columns_defs = table_info.fetch(:sql).split(Regexp.union(["(", ")"]))[1].split(",")
+    column_names = columns_defs.map{|col_def| col_def.split()[0]}
+    col_primary_index_key = columns_defs.select{|col_def| col_def.include? "integer primary key"}[0].split()[0]
+
+    [table_info, table_root_page_index, column_names, col_primary_index_key]
   end
 end
