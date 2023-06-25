@@ -41,8 +41,13 @@ class DatabaseFileScanner
     #   {type: "type1", name: "name1", tbl_name: "tbl_name1", rootpage: 111, sql: "sql1"},
     #   {type: "type2", name: "name2", tbl_name: "tbl_name2", rootpage: 222, sql: "sql2"},
     # ]
-    def get_records(columns)
+    def get_records(columns, primary_index_key)
+      if !primary_index_key.nil? && !columns.include?(primary_index_key)
+        raise StandardError.new("You specified #{primary_index_key} as a primary key, but it is not included in columns #{columns}.")
+      end
+
       @columns = columns
+      @primary_index_key = primary_index_key
 
       @records = []
       traverse_to_find_records(@root_page_index)
@@ -91,7 +96,7 @@ class DatabaseFileScanner
         _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
         cell_row_id_offset = cell_payload_size_offset + used_bytes
 
-        _row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_row_id_offset)).read
+        row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_row_id_offset)).read
         cell_payload_offset = cell_row_id_offset + used_bytes
 
         cell_payload_offset += 1 # I don't know what this 1 byte is.
@@ -110,9 +115,13 @@ class DatabaseFileScanner
         record = {}
         # Value encodings for each column
         col_to_serial_type.each do |col, (used_bytes, read_lambda)|
-          @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-          col_value = read_lambda.call(@file)
-          record[col] = col_value
+          record[col] =
+            if col == @primary_index_key
+              row_id
+            else
+              @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+              read_lambda.call(@file)
+            end
           curr_offset += used_bytes
         end
 
