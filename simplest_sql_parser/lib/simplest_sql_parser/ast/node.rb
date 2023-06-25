@@ -75,9 +75,10 @@ QueryNode.new
                 @type: :single_col
                 @name: "name"
   @from: FromClauseNode.new
-    @table: TableNode.new
-      @table_def: ExpressionNode.new
+    @from_table: FromTable.new       # or this could be FunctionNode of table/
       @alias_name: String.new
+      @table_def: TableNode.new
+        @name: String.new
  @where: WhereClauseNode.new
     @predicate: Array.new
       - ConditionNode.new

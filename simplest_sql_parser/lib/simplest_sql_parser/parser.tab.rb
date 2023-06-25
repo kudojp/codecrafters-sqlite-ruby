@@ -11,7 +11,7 @@ Dir[File.join(File.dirname(__FILE__), "ast/*.rb")].each {|file| require file }
 module SimplestSqlParser
   class Parser < Racc::Parser
 
-module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 50)
+module_eval(<<'...end parser.racc/module_eval...', 'parser.racc', 56)
 # innerの内容はそのまま生成されたparser.tab.rbファイル内のParserクラス内でmodule_evalされる。
 # ref. https://i.loveruby.net/ja/projects/racc/doc/parser.html#Racc%3a%3aParser-yyparse
 
@@ -30,43 +30,41 @@ end
 
 racc_action_table = [
     11,    12,    13,    11,    12,    13,    11,    12,    13,    11,
-    12,    13,     3,     4,     6,    14,    16,    18,    19,    20,
-    28,    29,    18 ]
+    12,    13,     3,     4,     6,    14,    16,    19,    20,    21,
+    29,    30,    32 ]
 
 racc_action_check = [
-     3,     3,     3,    16,    16,    16,    19,    19,    19,    20,
-    20,    20,     0,     1,     2,     4,     5,     6,     7,    13,
-    23,    25,    28 ]
+     3,     3,     3,    16,    16,    16,    20,    20,    20,    21,
+    21,    21,     0,     1,     2,     4,     5,     6,     7,    13,
+    24,    26,    29 ]
 
 racc_action_pointer = [
     10,    13,     5,    -4,    15,     6,    13,    15,   nil,   nil,
-   nil,   nil,   nil,    12,   nil,   nil,    -1,   nil,   nil,     2,
-     5,   nil,   nil,     9,   nil,    13,   nil,   nil,    18,   nil,
-   nil ]
+   nil,   nil,   nil,    12,   nil,   nil,    -1,   nil,   nil,   nil,
+     2,     5,   nil,   nil,     9,   nil,    13,   nil,   nil,    18,
+   nil,   nil,   nil ]
 
 racc_action_default = [
-   -19,   -19,    -1,   -19,   -19,    -2,   -19,    -4,    -5,    -7,
-    -8,    -9,   -10,   -19,    31,    -3,   -19,   -14,   -18,   -19,
-   -19,   -15,   -16,   -19,    -6,   -19,   -12,   -13,   -19,   -11,
-   -17 ]
+   -21,   -21,    -1,   -21,   -21,    -2,   -21,    -4,    -5,    -7,
+    -8,    -9,   -10,   -21,    33,    -3,   -21,   -14,   -15,   -16,
+   -21,   -21,   -17,   -18,   -21,    -6,   -21,   -12,   -13,   -21,
+   -11,   -19,   -20 ]
 
 racc_goto_table = [
-    17,     8,     1,     2,     5,    15,     7,    26,    27,    25,
-    21,    22,   nil,   nil,    23,   nil,   nil,    24,   nil,   nil,
-   nil,   nil,    30 ]
+     8,     1,     2,     5,    15,     7,    27,    28,    26,    17,
+    18,    22,    23,    24,    31,   nil,   nil,    25 ]
 
 racc_goto_check = [
-    10,     6,     1,     2,     3,     4,     5,     7,     8,     9,
-    11,    12,   nil,   nil,     6,   nil,   nil,     6,   nil,   nil,
-   nil,   nil,    10 ]
+     6,     1,     2,     3,     4,     5,     7,     8,     9,    10,
+    11,    12,    13,     6,    14,   nil,   nil,     6 ]
 
 racc_goto_pointer = [
-   nil,     2,     3,     2,     0,     3,    -2,   -13,   -12,   -11,
-    -6,    -6,    -5 ]
+   nil,     1,     2,     1,    -1,     2,    -3,   -15,   -14,   -13,
+     3,     4,    -5,    -4,   -15 ]
 
 racc_goto_default = [
    nil,   nil,   nil,   nil,   nil,   nil,   nil,     9,    10,   nil,
-   nil,   nil,   nil ]
+   nil,   nil,   nil,   nil,   nil ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
@@ -84,14 +82,16 @@ racc_reduce_table = [
   1, 21, :_reduce_none,
   1, 21, :_reduce_none,
   2, 15, :_reduce_14,
-  2, 16, :_reduce_15,
+  1, 22, :_reduce_15,
   1, 23, :_reduce_16,
-  3, 24, :_reduce_17,
-  1, 22, :_reduce_18 ]
+  2, 16, :_reduce_17,
+  1, 24, :_reduce_18,
+  3, 25, :_reduce_19,
+  1, 26, :_reduce_20 ]
 
-racc_reduce_n = 19
+racc_reduce_n = 21
 
-racc_shift_n = 31
+racc_shift_n = 33
 
 racc_token_table = {
   false => 0,
@@ -151,9 +151,11 @@ Racc_token_to_s_table = [
   "column_node",
   "function_node",
   "arg_node",
-  "expression",
+  "from_table",
+  "table",
   "predicate",
-  "condition" ]
+  "condition",
+  "expression" ]
 Ractor.make_shareable(Racc_token_to_s_table) if defined?(Ractor)
 
 Racc_debug_parser = false
@@ -245,34 +247,48 @@ module_eval(<<'.,.,', 'parser.racc', 27)
 
 module_eval(<<'.,.,', 'parser.racc', 33)
   def _reduce_14(val, _values, result)
-     result = AST::FromClauseNode.new(table: AST::TableNode.new(table_def: val[1]))
+     result = AST::FromClauseNode.new(from_table: val[1])
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parser.racc', 35)
   def _reduce_15(val, _values, result)
-     result = AST::WhereClauseNode.new(predicate: val[1])
+     result = AST::FromTableNode.new(table_def: val[0], alias_name: nil)
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 37)
+module_eval(<<'.,.,', 'parser.racc', 39)
   def _reduce_16(val, _values, result)
-     result = [val[0]]
+     result = AST::TableNode.new(name: val[0])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parser.racc', 40)
+module_eval(<<'.,.,', 'parser.racc', 41)
   def _reduce_17(val, _values, result)
-     result = AST::ConditionNode.new(operator: :equals, left: val[0], right: val[2])
+     result = AST::WhereClauseNode.new(predicate: val[1])
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parser.racc', 43)
   def _reduce_18(val, _values, result)
+     result = [val[0]]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parser.racc', 46)
+  def _reduce_19(val, _values, result)
+     result = AST::ConditionNode.new(operator: :equals, left: val[0], right: val[2])
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parser.racc', 49)
+  def _reduce_20(val, _values, result)
     result = AST::ExpressionNode.new(value: val[0])
     result
   end

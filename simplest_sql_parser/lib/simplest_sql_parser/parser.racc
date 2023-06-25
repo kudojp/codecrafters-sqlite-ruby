@@ -31,7 +31,13 @@ rule
   arg_node : column_node
            | function_node
 
-  from_clause : FROM expression { result = AST::FromClauseNode.new(table: AST::TableNode.new(table_def: val[1])) }
+  from_clause : FROM from_table { result = AST::FromClauseNode.new(from_table: val[1]) }
+
+  from_table : table { result = AST::FromTableNode.new(table_def: val[0], alias_name: nil)}
+  # Enable to accept function of TableNode here.
+  # Enable to read alias defined with `AS` here.
+
+  table : IDENTIFIER { result = AST::TableNode.new(name: val[0])}
 
   where_clause : WHERE predicate { result = AST::WhereClauseNode.new(predicate: val[1])}
 

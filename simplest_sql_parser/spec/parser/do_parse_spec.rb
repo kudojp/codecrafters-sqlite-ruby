@@ -35,8 +35,8 @@ RSpec.describe SimplestSqlParser::Parser do
             ]
           ),
           from_clause: AST::FromClauseNode.new(
-            table: AST::TableNode.new(
-              table_def: AST::ExpressionNode.new(value: "table")
+            from_table: AST::FromTableNode.new(
+              table_def: AST::TableNode.new(name: "table")
             )
           ),
           where_clause: nil
@@ -62,8 +62,8 @@ RSpec.describe SimplestSqlParser::Parser do
             ]
           ),
           from_clause: AST::FromClauseNode.new(
-            table: AST::TableNode.new(
-              table_def: AST::ExpressionNode.new(value: "table")
+            from_table: AST::FromTableNode.new(
+              table_def: AST::TableNode.new(name: "table")
             )
           ),
           where_clause: nil
@@ -83,8 +83,8 @@ RSpec.describe SimplestSqlParser::Parser do
             ]
           ),
           from_clause: AST::FromClauseNode.new(
-            table: AST::TableNode.new(
-              table_def: AST::ExpressionNode.new(value: "table")
+            from_table: AST::FromTableNode.new(
+              table_def: AST::TableNode.new(name: "table")
             )
           ),
           where_clause: nil
@@ -109,8 +109,8 @@ RSpec.describe SimplestSqlParser::Parser do
             ]
           ),
           from_clause: AST::FromClauseNode.new(
-            table: AST::TableNode.new(
-              table_def: AST::ExpressionNode.new(value: "table")
+            from_table: AST::FromTableNode.new(
+              table_def: AST::TableNode.new(name: "table")
             )
           ),
           where_clause: AST::WhereClauseNode.new(
@@ -147,8 +147,8 @@ RSpec.describe SimplestSqlParser::Parser do
             ]
           ),
           from_clause: AST::FromClauseNode.new(
-            table: AST::TableNode.new(
-              table_def: AST::ExpressionNode.new(value: "table")
+            from_table: AST::FromTableNode.new(
+              table_def: AST::TableNode.new(name: "table")
             )
           ),
           where_clause: AST::WhereClauseNode.new(
