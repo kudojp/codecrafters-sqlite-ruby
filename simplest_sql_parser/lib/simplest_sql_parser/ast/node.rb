@@ -26,6 +26,8 @@ module AST
     # In rspec, `eq` matcher uses #==() to compare two objects.
     # In our case, when comparing two nodes, we must compare their descendant nodes as well.
     def ==(another_node)
+      return false unless self.class == another_node.class
+
       self.attributes.each do |attr_sym|
         return false unless self.send(attr_sym) == another_node.send(attr_sym)
       end

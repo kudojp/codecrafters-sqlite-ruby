@@ -45,7 +45,7 @@ RSpec.describe SimplestSqlParser::LexicalScanner do
 
   context "when a query includes WHERE statement" do
     it "tokenizes the query" do
-      scanner.scan_setup("SELECT name, address FROM table WHERE id = 12.5")
+      scanner.scan_setup("SELECT name, address FROM table WHERE city = 'TOKYO'")
       expect(scanner.next_token).to eq [:SELECT, "SELECT"]
       expect(scanner.next_token).to eq [:IDENTIFIER, "name"]
       expect(scanner.next_token).to eq [:COMMA, ","]
@@ -53,16 +53,18 @@ RSpec.describe SimplestSqlParser::LexicalScanner do
       expect(scanner.next_token).to eq [:FROM, "FROM"]
       expect(scanner.next_token).to eq [:IDENTIFIER, "table"]
       expect(scanner.next_token).to eq [:WHERE, "WHERE"]
-      expect(scanner.next_token).to eq [:IDENTIFIER, "id"]
+      expect(scanner.next_token).to eq [:IDENTIFIER, "city"]
       expect(scanner.next_token).to eq [:EQUALS, "="]
-      expect(scanner.next_token).to eq [:IDENTIFIER, 12.5]
+      expect(scanner.next_token).to eq [:SINGLE_QUOTE, "'"]
+      expect(scanner.next_token).to eq [:IDENTIFIER, "TOKYO"]
+      expect(scanner.next_token).to eq [:SINGLE_QUOTE, "'"]
       expect(scanner.next_token).to eq nil
     end
   end
 
   context "when a query includes COUNT function" do
     it "tokenizes the query" do
-      scanner.scan_setup("SELECT COUNT(*) FROM table WHERE id = 12")
+      scanner.scan_setup("SELECT COUNT(*) FROM table WHERE id = 12.5")
       expect(scanner.next_token).to eq [:SELECT, "SELECT"]
       expect(scanner.next_token).to eq [:COUNT, "COUNT"]
       expect(scanner.next_token).to eq [:PARENTHESIS_LEFT, "("]
@@ -73,7 +75,7 @@ RSpec.describe SimplestSqlParser::LexicalScanner do
       expect(scanner.next_token).to eq [:WHERE, "WHERE"]
       expect(scanner.next_token).to eq [:IDENTIFIER, "id"]
       expect(scanner.next_token).to eq [:EQUALS, "="]
-      expect(scanner.next_token).to eq [:IDENTIFIER, 12]
+      expect(scanner.next_token).to eq [:IDENTIFIER, 12.5]
       expect(scanner.next_token).to eq nil
     end
   end

@@ -95,7 +95,7 @@ RSpec.describe SimplestSqlParser::Parser do
 
   context "when query includes SELECT, FROM, WHERE statement" do
     it "generates the AST" do
-      ast = described_class.new("SELECT name, address FROM table WHERE id = 12.5").do_parse
+      ast = described_class.new("SELECT name, address FROM table WHERE city = 'TOKYO'").do_parse
       expect(ast).to eq(
         AST::QueryNode.new(
           select_clause: AST::SelectClauseNode.new(
@@ -118,10 +118,10 @@ RSpec.describe SimplestSqlParser::Parser do
               AST::ConditionNode.new(
                 operator: :equals,
                 left: AST::SelectedColumnNode.new(
-                  col_def: AST::ColumnNode.new(type: :single_col, name: "id")
+                  col_def: AST::ColumnNode.new(type: :single_col, name: "city")
                 ),
                 right: AST::ExpressionNode.new(
-                  value: 12.5
+                  value: "TOKYO"
                 )
               )
             ]
@@ -160,6 +160,45 @@ RSpec.describe SimplestSqlParser::Parser do
                 ),
                 right: AST::ExpressionNode.new(
                   value: 12.5
+                )
+              )
+            ]
+          )
+        )
+      )
+    end
+  end
+
+  # TODO: This is a known issue.
+  xcontext "WHEN an integer is surrounded by a single quote (e.g. '1212')" do
+    it "generates the AST" do
+      ast = described_class.new("SELECT name, address FROM table WHERE phone_number = '1212'").do_parse
+      expect(ast).to eq(
+        AST::QueryNode.new(
+          select_clause: AST::SelectClauseNode.new(
+            selected_columns: [
+              AST::SelectedColumnNode.new(
+                col_def: AST::ColumnNode.new(type: :single_col, name: "name")
+              ),
+              AST::SelectedColumnNode.new(
+                col_def: AST::ColumnNode.new(type: :single_col, name: "address")
+              )
+            ]
+          ),
+          from_clause: AST::FromClauseNode.new(
+            from_table: AST::FromTableNode.new(
+              table_def: AST::TableNode.new(name: "table")
+            )
+          ),
+          where_clause: AST::WhereClauseNode.new(
+            predicate: [
+              AST::ConditionNode.new(
+                operator: :equals,
+                left: AST::SelectedColumnNode.new(
+                  col_def: AST::ColumnNode.new(type: :single_col, name: "phone_number")
+                ),
+                right: AST::ExpressionNode.new(
+                  value: "1212" ################### -> This becomes "12.12" in a generated node.
                 )
               )
             ]

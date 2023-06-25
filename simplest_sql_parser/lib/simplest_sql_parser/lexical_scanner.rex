@@ -31,6 +31,7 @@ rule
   =   {[:EQUALS, text]}
   \(   {[:PARENTHESIS_LEFT, text]}
   \)   {[:PARENTHESIS_RIGHT, text]}
+  '    {[:SINGLE_QUOTE, text]}
 
   # identifiers
   {WORD} { [:IDENTIFIER, text] }

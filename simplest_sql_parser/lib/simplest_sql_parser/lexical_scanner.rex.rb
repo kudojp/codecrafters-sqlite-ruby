@@ -89,6 +89,9 @@ class SimplestSqlParser::LexicalScanner < Racc::Parser
                   when (text = @ss.scan(/\)/i))
                      action {[:PARENTHESIS_RIGHT, text]}
 
+                  when (text = @ss.scan(/'/i))
+                     action {[:SINGLE_QUOTE, text]}
+
                   when (text = @ss.scan(/[a-zA-Z]\w*/i))
                      action { [:IDENTIFIER, text] }
 
