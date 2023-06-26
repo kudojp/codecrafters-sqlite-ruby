@@ -6,6 +6,7 @@ class DatabaseFileScanner
   PAGE_SIZE_OFFSET_IN_FILE_HEADER = 16
   PAGE_SIZE_LENGTH_IN_FILE_HEADER = 2
   SQLITE_SCHEMA_PAGE_NUMBER = 1
+  SQLITE_SCHEMA_TABLE_NAME = "sqlite_schema"
 
   def initialize(database_file_path)
     @file = File.open(database_file_path, "rb")
@@ -70,7 +71,16 @@ class DatabaseFileScanner
   end
 
   def table_name_to_metadata(table_name)
-    return @table_metadata[table_name] if @table_metadata&.key? table_name
+    @table_metadata ||= {
+      SQLITE_SCHEMA_TABLE_NAME => {
+        root_page_index: SQLITE_SCHEMA_PAGE_NUMBER,
+        column_names: Database::SqliteSchema::TABLE_ATTRIBUTES,
+        col_primary_index_key: nil
+      }
+    }
+
+    return @table_metadata[table_name] if @table_metadata.key? table_name
+
     table_info = self.sqlite_schema.tables.find{|tbl| tbl.fetch(:name) == table_name}
     table_root_page_index = table_info.fetch(:rootpage)
     # table_info is like:
