@@ -15,8 +15,8 @@ class PlanAndExecutor
     end
 
     # FROM table (WHERE predicate)
-    filtering_by_index, other_filtering_condition = best_scanning_pattern(table_name, @ast.where_clause)
-    records = @db_file_scanner.get_records(table_name, filtering_by_index)
+    filtering_by_secondary_index, other_filtering_condition = best_scanning_pattern(table_name, @ast.where_clause)
+    records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index)
     records = records.select{|record| other_filtering_condition.call(record)} if other_filtering_condition
 
     # SELECT col1, col2, col3

@@ -44,7 +44,7 @@ class DatabaseFileScanner
     )
   end
 
-  def get_records_by_index_scan(table_name, secondary_index)
+  def get_records_by_index_scan(table_name, filtering_by_secondary_index)
     #TODO
     []
   end
