@@ -174,8 +174,8 @@ class DatabaseFileScanner
       # TODO: add key=0~11 here.
       mapping = {
         0 => [0, lambda{|_file| nil}],
-        1 => [1, lambda{|file| file.read(byte_length).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
-        2 => [2, lambda{|file| file.read(byte_length).unpack("n")[0]}], # n: big endian unsigned 16bit
+        1 => [1, lambda{|file| file.read(1).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
+        2 => [2, lambda{|file| file.read(2).unpack("n")[0]}], # n: big endian unsigned 16bit
         9 => [0, lambda{|_file| 1}]
       }
       mapping.fetch(serial_type)
