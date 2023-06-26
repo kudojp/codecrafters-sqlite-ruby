@@ -27,8 +27,8 @@ class DatabaseFileScanner
   end
 
   def get_records(table_name, secondary_index=nil)
-    return get_records_by_full_scan(table_name) unless secondary_index
-    get_records_by_index_scan(table_name, secondary_index)
+    return get_records_by_index_scan(table_name, secondary_index) if secondary_index
+    get_records_by_full_scan(table_name)
   end
 
   def get_records_by_full_scan(table_name)
