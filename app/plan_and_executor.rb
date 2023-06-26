@@ -16,7 +16,7 @@ class PlanAndExecutor
 
     # FROM table (WHERE predicate)
     filtering_by_secondary_index, other_filtering_condition = best_scanning_pattern(table_name, @ast.where_clause)
-    records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index)
+    records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index) # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :lambda_is_key_in_left_child_pages)
     records = records.select{|record| other_filtering_condition.call(record)} if other_filtering_condition
 
     # SELECT *
@@ -66,9 +66,14 @@ class PlanAndExecutor
     if applicable_index
       # For now, it assumes that using index scanning is the fastest pattern.
       # TODO: return something useful here.
-      filtering_by_secondary_index = applicable_index.fetch("rootpage")
+      index_tree_root_page = applicable_index.fetch("rootpage")
+      lambda_is_key_in_left_child_pages = lambda{|key_in_interior| key_in_interior <= filtering_col_name }
+
       other_filtering_condition = nil # Because currently WHERE clause is simply `WHERE col1 = x`.
-      return [filtering_by_secondary_index, other_filtering_condition]
+      return [
+        {index_tree_root_page: index_tree_root_page, lambda_is_key_in_left_child_pages: lambda_is_key_in_left_child_pages},
+        other_filtering_condition
+      ]
     end
 
     filtering_by_secondary_index = nil

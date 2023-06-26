@@ -27,9 +27,14 @@ class DatabaseFileScanner
     TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).cnt_records
   end
 
-  def get_records(table_name, secondary_index=nil)
-    return get_records_by_index_scan(table_name, secondary_index) if secondary_index
+  def get_records(table_name, filtering_by_secondary_index=nil)
+    return get_records_by_index_scan(table_name, filtering_by_secondary_index) if filtering_by_secondary_index
     get_records_by_full_scan(table_name)
+  end
+
+  # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :is_key_in_left_child_pages)
+  def get_records_by_index_scan(table_name, filtering_by_secondary_index)
+    []
   end
 
   def get_records_by_full_scan(table_name)
@@ -43,11 +48,6 @@ class DatabaseFileScanner
       table_metadata.fetch(:column_names),
       table_metadata.fetch(:col_primary_index_key)
     )
-  end
-
-  def get_records_by_index_scan(table_name, filtering_by_secondary_index)
-    #TODO
-    []
   end
 
   private
