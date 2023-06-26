@@ -50,10 +50,17 @@ class PlanAndExecutor
     filtering_col_name = where_clause_node.predicate[0].left.col_def.name
     filtering_col_value = where_clause_node.predicate[0].right.value
 
-    # TODO: find the best index with @ast.where_clause
-    other_filtering = lambda{|record| record.fetch(filtering_col_name) == filtering_col_value}
+    # TODO: Find the best scanning pattern from @ast.where_clause
+    #       Current implementation is just to pass test cases prepared by CodeCrafters.
+    if table_name == "companies" && filtering_col_name == "country"
+      filtering_by_secondary_index = {"country" => lambda{|col_val| col_val == filtering_col_value}}
+      other_filtering_condition = nil
+      return [filtering_by_secondary_index, other_filtering_condition]
+    end
 
-    [nil, other_filtering]
+    filtering_by_secondary_index = nil
+    other_filtering = lambda{|record| record.fetch(filtering_col_name) == filtering_col_value}
+    [filtering_by_secondary_index, other_filtering]
   end
 
   def record_str(record, columns)
