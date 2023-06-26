@@ -17,7 +17,7 @@ when ".dbinfo"
   puts "number of tables: #{sqlite_schema.cnt_tables}"
 when ".tables"
   sqlite_schema = db_file_scanner.sqlite_schema
-  puts sqlite_schema.tables.map{|tbl| tbl.fetch(:name)}.join " "
+  puts sqlite_schema.tables.map{|tbl| tbl.fetch("name")}.join " "
 else
   ast = SimplestSqlParser.parse(command)
   result = PlanAndExecutor.new(ast, db_file_scanner).execute
