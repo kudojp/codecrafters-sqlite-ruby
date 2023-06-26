@@ -169,7 +169,6 @@ RSpec.describe SimplestSqlParser::Parser do
     end
   end
 
-  # TODO: This is a known issue.
   context "WHEN an integer is surrounded by a single quote (e.g. '1212')" do
     it "generates the AST" do
       ast = described_class.new("SELECT name, address FROM table WHERE phone_number = '1212'").do_parse
