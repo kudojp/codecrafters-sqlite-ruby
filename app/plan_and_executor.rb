@@ -65,9 +65,8 @@ class PlanAndExecutor
 
     if applicable_index
       # For now, it assumes that using index scanning is the fastest pattern.
-      # TODO: return something useful here.
       index_tree_root_page = applicable_index.fetch("rootpage")
-      lambda_is_key_in_left_child_pages = lambda{|key_in_interior| key_in_interior <= filtering_col_name }
+      lambda_is_key_in_left_child_pages = lambda{|key_in_interior| key_in_interior <= filtering_col_value }
 
       other_filtering_condition = nil # Because currently WHERE clause is simply `WHERE col1 = x`.
       return [
