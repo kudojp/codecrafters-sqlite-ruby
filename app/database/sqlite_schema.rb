@@ -4,5 +4,13 @@ module Database
 
     attr_accessor :cnt_tables
     attr_accessor :tables
+
+    def initialize(tables)
+      @tables = tables
+    end
+
+    def cnt_tables
+      @tables.length
+    end
   end
 end

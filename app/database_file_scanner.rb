@@ -64,10 +64,9 @@ class DatabaseFileScanner
   def get_sqlite_schema
     traverser = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER)
 
-    sqlite_schema = Database::SqliteSchema.new
-    sqlite_schema.cnt_tables = traverser.cnt_records
-    sqlite_schema.tables = traverser.get_records(Database::SqliteSchema::TABLE_ATTRIBUTES, nil)
-    sqlite_schema
+    Database::SqliteSchema.new(
+      traverser.get_records(Database::SqliteSchema::TABLE_ATTRIBUTES, nil)
+    )
   end
 
   def table_name_to_metadata(table_name)
