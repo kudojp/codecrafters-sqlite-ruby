@@ -20,7 +20,7 @@ module Database
       @records.find{|rec|
         rec.fetch("type") == "index" &&
         rec.fetch("name") == "idx_#{table}_#{column}" &&
-        rec.fetch("table_name") == table
+        rec.fetch("tbl_name") == table
       }
     end
   end
