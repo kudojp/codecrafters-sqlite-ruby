@@ -19,6 +19,11 @@ class PlanAndExecutor
     records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index)
     records = records.select{|record| other_filtering_condition.call(record)} if other_filtering_condition
 
+    # SELECT *
+    if select_all?(selected_columns)
+      return records.map{|record| record.values.join "|"} # TODO: take care of order of columns
+    end
+
     # SELECT col1, col2, col3
     selected_column_names = selected_columns.map{|sel_col| sel_col.col_def.name }
     records.map{|record| record_str(record, selected_column_names)}
@@ -33,6 +38,12 @@ class PlanAndExecutor
       type: :count,
       args: [AST::ColumnNode.new(type: :asterisk, name: nil)]
     )
+  end
+
+  def select_all?(selected_column_nodes)
+    return false unless selected_column_nodes.length == 1
+
+    selected_column_nodes[0].col_def.type == :asterisk
   end
 
   def best_scanning_pattern(table_name, where_clause_node)
