@@ -61,11 +61,13 @@ class PlanAndExecutor
     filtering_col_name = where_clause_node.predicate[0].left.col_def.name
     filtering_col_value = where_clause_node.predicate[0].right.value
 
-    # TODO: Find the best scanning pattern from @ast.where_clause
-    #       Current implementation is just to pass test cases prepared by CodeCrafters.
-    if table_name == "companies" && filtering_col_name == "country"
-      filtering_by_secondary_index = {"country" => lambda{|col_val| col_val == filtering_col_value}}
-      other_filtering_condition = nil
+    applicable_index = @db_file_scanner.sqlite_schema.applicable_index(table_name, filtering_col_name)
+
+    if applicable_index
+      # For now, it assumes that using index scanning is the fastest pattern.
+      # TODO: return something useful here.
+      filtering_by_secondary_index = applicable_index.fetch("rootpage")
+      other_filtering_condition = nil # Because currently WHERE clause is simply `WHERE col1 = x`.
       return [filtering_by_secondary_index, other_filtering_condition]
     end
 
