@@ -14,9 +14,8 @@ class PlanAndExecutor
       return @db_file_scanner.count_records(table_name)
     end
 
-    records = @db_file_scanner.get_records(table_name)
-
-    # WHERE *
+    # FROM table (WHERE predicate)
+    records = @db_file_scanner.get_records(table_name, best_secondary_index)
     records = where_filtered(records, @ast.where_clause) if @ast.where_clause
 
     # SELECT col1, col2, col3
@@ -33,6 +32,11 @@ class PlanAndExecutor
       type: :count,
       args: [AST::ColumnNode.new(type: :asterisk, name: nil)]
     )
+  end
+
+  def best_secondary_index
+    # TODO: find the best index with @ast.where_clause
+    nil
   end
 
   def where_filtered(records, where_clause_node)

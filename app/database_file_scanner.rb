@@ -26,9 +26,27 @@ class DatabaseFileScanner
     TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).cnt_records
   end
 
-  def get_records(table_name, filtering_cols=nil)
-    table_info, table_root_page_index, column_names, col_primary_index_key = get_table_metadata(table_name)
-    TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).get_records(column_names, col_primary_index_key)
+  def get_records(table_name, secondary_index=nil)
+    return get_records_by_full_scan(table_name) unless secondary_index
+    get_records_by_index_scan(table_name, secondary_index)
+  end
+
+  def get_records_by_full_scan(table_name)
+    table_metadata = table_name_to_metadata(table_name)
+
+    TableBTreeTraverser.new(
+      @file,
+      self.page_size,
+      table_metadata.fetch(:root_page_index)
+    ).get_records(
+      table_metadata.fetch(:column_names),
+      table_metadata.fetch(:col_primary_index_key)
+    )
+  end
+
+  def get_records_by_index_scan(table_name, secondary_index)
+    #TODO
+    []
   end
 
   private
@@ -51,7 +69,8 @@ class DatabaseFileScanner
     sqlite_schema
   end
 
-  def get_table_metadata(table_name)
+  def table_name_to_metadata(table_name)
+    return @table_metadata[table_name] if @table_metadata&.key? table_name
     table_info = self.sqlite_schema.tables.find{|tbl| tbl.fetch(:name) == table_name}
     table_root_page_index = table_info.fetch(:rootpage)
     # table_info is like:
@@ -60,6 +79,11 @@ class DatabaseFileScanner
     column_names = columns_defs.map{|col_def| col_def.split()[0]}
     col_primary_index_key = columns_defs.select{|col_def| col_def.include? "integer primary key"}[0].split()[0]
 
-    [table_info, table_root_page_index, column_names, col_primary_index_key]
+    @table_metadata = {}
+    @table_metadata[:table_name] = {
+      root_page_index: table_root_page_index,
+      column_names: column_names,
+      col_primary_index_key: col_primary_index_key
+    }
   end
 end
