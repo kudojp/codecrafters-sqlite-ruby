@@ -77,7 +77,8 @@ class DatabaseFileScanner
     #    "CREATE TABLE butterscotch (id integer primary key, grape text,coffee text,watermelon text,strawberry text,vanilla text)"
     columns_defs = table_info.fetch(:sql).split(Regexp.union(["(", ")"]))[1].split(",")
     column_names = columns_defs.map{|col_def| col_def.split()[0]}
-    col_primary_index_key = columns_defs.select{|col_def| col_def.include? "integer primary key"}[0].split()[0]
+    pk_columns_def = columns_defs.find{|col_def| col_def.include? "integer primary key"}
+    col_primary_index_key = pk_columns_def ? pk_columns_def.split()[0] : nil
 
     @table_metadata = {}
     @table_metadata[:table_name] = {
