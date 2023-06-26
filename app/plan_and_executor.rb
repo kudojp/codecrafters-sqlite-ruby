@@ -15,8 +15,9 @@ class PlanAndExecutor
     end
 
     # FROM table (WHERE predicate)
-    records = @db_file_scanner.get_records(table_name, best_secondary_index)
-    records = where_filtered(records, @ast.where_clause) if @ast.where_clause
+    filtering_by_index, other_filtering_condition = best_scanning_pattern(table_name, @ast.where_clause)
+    records = @db_file_scanner.get_records(table_name, filtering_by_index)
+    records = records.select{|record| other_filtering_condition.call(record)} if other_filtering_condition
 
     # SELECT col1, col2, col3
     selected_column_names = selected_columns.map{|sel_col| sel_col.col_def.name }
@@ -34,12 +35,10 @@ class PlanAndExecutor
     )
   end
 
-  def best_secondary_index
-    # TODO: find the best index with @ast.where_clause
-    nil
-  end
+  def best_scanning_pattern(table_name, where_clause_node)
+    return [nil, lambda{|_record| true}] unless where_clause_node
 
-  def where_filtered(records, where_clause_node)
+    # Currently where_clause is assumed to be simply `col = xxx`
     raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate&.length == 1
     raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].is_a? AST::ConditionNode
     raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].is_a? AST::ConditionNode
@@ -48,11 +47,13 @@ class PlanAndExecutor
     raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].left.col_def.is_a? AST::ColumnNode
     raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate[0].right.is_a? AST::ExpressionNode
 
-    # WHERE col1 = 'value'
     filtering_col_name = where_clause_node.predicate[0].left.col_def.name
     filtering_col_value = where_clause_node.predicate[0].right.value
 
-    records.select{|record| record.fetch(filtering_col_name) == filtering_col_value}
+    # TODO: find the best index with @ast.where_clause
+    other_filtering = lambda{|record| record.fetch(filtering_col_name) == filtering_col_value}
+
+    [nil, other_filtering]
   end
 
   def record_str(record, columns)
