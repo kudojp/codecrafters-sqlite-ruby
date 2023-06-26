@@ -14,7 +14,7 @@ when ".dbinfo"
   puts "database page size: #{header_info.page_size}"
 
   sqlite_schema = db_file_scanner.sqlite_schema
-  puts "number of tables: #{sqlite_schema.cnt_tables}"
+  puts "number of tables: #{sqlite_schema.tables.length}"
 when ".tables"
   sqlite_schema = db_file_scanner.sqlite_schema
   puts sqlite_schema.tables.map{|tbl| tbl.fetch("name")}.join " "
