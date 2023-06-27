@@ -66,30 +66,47 @@ class DatabaseFileScanner
         cell_offset = @file.read(2).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
         cell_payload_size_offset = cell_offset
-        payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
+        _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
         cell_payload_offset = cell_payload_size_offset + used_bytes
 
-        # Type encodings for 2 values
-        type_encodings = []
-        curr_offset = cell_payload_offset
-        2.times do
-          @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-          col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
-          type_encodings << serial_type(col_serial_type)
-          curr_offset += used_bytes
-        end
+        curr_offset = cell_payload_offset + 1
 
-        # Value encodings for each column
-        type_encodings.each_with_index do |(used_bytes, read_lambda), i|
-          @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-          value = read_lambda.call(@file)
-          @page_indexes_of_table_records << value if i == 0
-          curr_offset += used_bytes
-        end
+        # encoding of `key`
+        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+        col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        key_byte_length, key_read_lambda = serial_type(col_serial_type)
+        curr_offset += used_bytes
+
+        # encoding of `page index of the table leaf`
+        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+        col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        print "\n\nsecond type encoding : #{col_serial_type}\n\n"
+        page_of_table_leaf_byte_length, page_of_table_leaf_lambda = serial_type(col_serial_type)
+        curr_offset += used_bytes
+
+        # value of `key`
+        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+        key = key_read_lambda.call(@file)
+        print("\n####### key=#{key}\n")
+        curr_offset += key_byte_length
+
+
+        ### value of `page index of the table leaf`
+        # @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+        # page = page_of_table_leaf_lambda.call(@file)
+        # curr_offset += page_of_table_leaf_byte_length
+
+        # value of `page index of the table leaf`
+        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+        page, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        curr_offset += used_bytes
+
+        @page_indexes_of_table_records << page
       end
     end
 
     def child_page_indexes(page_index)
+      puts "\n### going down the index and now I am in interior page=#{page_index}"
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -156,10 +173,9 @@ class DatabaseFileScanner
         2 => [2, lambda{|file| file.read(2).unpack("n")[0]}], # n: big endian unsigned 16bit
         3 => [3, lambda{|file|                                #    big-endian 24-bit twos-complement integer.
           # ref. https://dormolin.livedoor.blog/archives/52185510.html
-          puts "@@@@@@@@@ WARNING(index traverser): This should be fixed @@@@@@@@@"
-          3
+          "\x00#{file.read(3)}".unpack("i")[0]
         }],
-        4 => [4, lambda{|file| file.read(4).unpack("N")[0]}], # N: big endian unsigned 32bit
+        4 => [4, lambda{|file| file.read(4).unpack("i")[0]}], # N: big endian unsigned 32bit
         9 => [0, lambda{|_file| 1}]
       }
       mapping.fetch(serial_type)
