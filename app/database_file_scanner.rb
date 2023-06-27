@@ -48,16 +48,21 @@ class DatabaseFileScanner
 
     table_metadata = table_name_to_metadata(table_name)
 
-    page_indexes_of_table_records.each_with_object([]) do |table_leaf_page_index, records|
-      records += TableBTreeTraverser.new(
+    records = []
+    page_indexes_of_table_records.each do |table_leaf_page_index|
+      TableBTreeTraverser.new(
         file: @file,
         page_size: self.page_size,
       ).get_records_in_leaf(
         leaf_page_index: table_leaf_page_index,
         columns: table_metadata.fetch(:column_names),
         primary_index_key: table_metadata.fetch(:col_primary_index_key)
-      )
+      ).each do |record|
+        records << record
+      end
     end
+
+    records
   end
 
   def get_records_by_full_scan(table_name)
