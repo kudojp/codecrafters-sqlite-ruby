@@ -17,7 +17,7 @@ class PlanAndExecutor
     # FROM table (WHERE predicate)
     filtering_by_secondary_index, all_filtering_conditions = best_scanning_pattern(table_name, @ast.where_clause)
     records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index) # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :lambda_is_key_in_left_child_pages)
-    records = records.select{|record| all_filtering_conditions.call(record)}# if all_filtering_conditions
+    records = records.select{|record| all_filtering_conditions.call(record)} if all_filtering_conditions
 
     # SELECT *
     if select_all?(selected_columns)
@@ -47,7 +47,7 @@ class PlanAndExecutor
   end
 
   def best_scanning_pattern(table_name, where_clause_node)
-    return [nil, lambda{|_record| true}] unless where_clause_node
+    return [nil, nil] unless where_clause_node
 
     # Currently where_clause is assumed to be simply `col = xxx`
     raise StandardError.new("WHERE clause is too complicated!") unless where_clause_node.predicate&.length == 1
@@ -62,17 +62,18 @@ class PlanAndExecutor
     filtering_col_value = where_clause_node.predicate[0].right.value
 
     applicable_index = @db_file_scanner.sqlite_schema.applicable_index(table_name, filtering_col_name)
+    filtering_by_secondary_index =
+      if applicable_index
+        # For now, it assumes that using index scanning is the fastest pattern.
+        {
+          index_tree_root_page: applicable_index.fetch("rootpage"),
+          lambda_is_key_in_left_child_pages:lambda{|key_in_interior| key_in_interior <= filtering_col_value }
+        }
+      else
+        nil
+      end
 
-    filtering_by_secondary_index = nil
     all_filtering_conditions = lambda{|record| record.fetch(filtering_col_name) == filtering_col_value}
-
-    if applicable_index
-      # For now, it assumes that using index scanning is the fastest pattern.
-      index_tree_root_page = applicable_index.fetch("rootpage")
-      lambda_is_key_in_left_child_pages = lambda{|key_in_interior| key_in_interior <= filtering_col_value }
-
-      filtering_by_secondary_index = {index_tree_root_page: index_tree_root_page, lambda_is_key_in_left_child_pages: lambda_is_key_in_left_child_pages}
-    end
 
     [filtering_by_secondary_index, all_filtering_conditions]
   end
