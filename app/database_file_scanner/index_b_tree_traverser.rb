@@ -23,7 +23,6 @@ class DatabaseFileScanner
     def get_page_indexes_of_table_records
       @page_indexes_of_table_records = Set.new
       self.traverse_to_find_page_indexes_of_table_records(page_index: @root_page_index)
-      print "## page_indexes_of_table_records: #{@page_indexes_of_table_records} of root page #{@root_page_index}##\n"
       @page_indexes_of_table_records
     end
 
@@ -69,19 +68,18 @@ class DatabaseFileScanner
         _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
         cell_payload_offset = cell_payload_size_offset + used_bytes
 
-        curr_offset = cell_payload_offset + 1
+        curr_offset = cell_payload_offset + 1 # I don't know what this one byte is.
+
+        # encoding of `page index of the table leaf`
+        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
+        col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        page_of_table_leaf_byte_length, page_of_table_leaf_lambda = serial_type(col_serial_type)
+        curr_offset += used_bytes
 
         # encoding of `key`
         @file.seek(file_offset_from_page_offset(page_index, curr_offset))
         col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
         key_byte_length, key_read_lambda = serial_type(col_serial_type)
-        curr_offset += used_bytes
-
-        # encoding of `page index of the table leaf`
-        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
-        # print "\n\nsecond type encoding : #{col_serial_type}\n\n"
-        page_of_table_leaf_byte_length, page_of_table_leaf_lambda = serial_type(col_serial_type)
         curr_offset += used_bytes
 
         # value of `key`
@@ -90,7 +88,7 @@ class DatabaseFileScanner
         # print("\n####### key=#{key}\n")
         curr_offset += key_byte_length
 
-        ### value of `page index of the table leaf`
+        ## value of `page index of the table leaf`
         # @file.seek(file_offset_from_page_offset(page_index, curr_offset))
         # page = page_of_table_leaf_lambda.call(@file)
         # curr_offset += page_of_table_leaf_byte_length
@@ -112,6 +110,7 @@ class DatabaseFileScanner
       @file.seek(self.file_offset_from_page_offset(page_index, first_offset + NUM_CELLS_OFFSET_IN_PAGE))
       num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
+      ret = []
       # For each record,,,
       num_cells.times do |nth_cell|
         # Cell pointer to cell content
@@ -145,26 +144,27 @@ class DatabaseFileScanner
         key = @file.read(_key_byte_length)
 
         ## You are searching for 15, then
-        #
+        #----------------------------------------
         #     15   18   18
-        #   x    o    x     x
-        #
+        #   o    o    x     x
         #----------------------------------------
         #    9    11   15
         #  x    x    x    o
-        #
+        #----------------------------------------
+        #    9    15   15   16
+        #  x   o     o    o    x
         #----------------------------------------
         #    18   20
         #  o    x    x
-        #
-        if @searching_key < key
-          return [left_child_page_index]
-        end
+        # ---------------------------------------
+        ret << left_child_page_index if @searching_key <= key
+        return ret if @searching_key < key
       end
 
       @file.seek(self.file_offset_from_page_offset(page_index, first_offset + RIGHTMOST_CHILD_POINTER_OFFSET_IN_INTERIOR_PAGE))
       rightmost_child_page_index = @file.read(RIGHTMOST_CHILD_POINTER_LENGTH_IN_INTERIOR_PAGE).unpack("N")[0] # N: big endian unsigned 32bit
-      [rightmost_child_page_index]
+      ret << rightmost_child_page_index
+      ret
     end
 
     def file_offset_from_page_offset(page_index, page_offset)
@@ -193,7 +193,7 @@ class DatabaseFileScanner
         2 => [2, lambda{|file| file.read(2).unpack("n")[0]}], # n: big endian unsigned 16bit
         3 => [3, lambda{|file|                                #    big-endian 24-bit twos-complement integer.
           # ref. https://dormolin.livedoor.blog/archives/52185510.html
-          "\x00#{file.read(3)}".unpack("i")[0]
+          "\x00#{file.read(3)}".unpack("N")[0]
         }],
         4 => [4, lambda{|file| file.read(4).unpack("N")[0]}], # N: big endian unsigned 32bit
         9 => [0, lambda{|_file| 1}]
