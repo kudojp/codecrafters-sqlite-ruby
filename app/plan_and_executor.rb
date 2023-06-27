@@ -67,7 +67,7 @@ class PlanAndExecutor
         # For now, it assumes that using index scanning is the fastest pattern.
         {
           index_tree_root_page: applicable_index.fetch("rootpage"),
-          lambda_is_key_in_left_child_pages:lambda{|key_in_interior| key_in_interior <= filtering_col_value }
+          searching_key: filtering_col_value,
         }
       else
         nil

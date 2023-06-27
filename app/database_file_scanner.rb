@@ -37,13 +37,13 @@ class DatabaseFileScanner
     get_records_by_full_scan(table_name)
   end
 
-  # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :lambda_is_key_in_left_child_pages)
+  # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :searching_key)
   def get_records_by_index_scan(table_name, filtering_by_secondary_index)
     page_indexes_of_table_records = IndexBTreeTraverser.new(
       @file,
       self.page_size,
       filtering_by_secondary_index.fetch(:index_tree_root_page),
-      filtering_by_secondary_index.fetch(:lambda_is_key_in_left_child_pages),
+      filtering_by_secondary_index.fetch(:searching_key),
     ).get_page_indexes_of_table_records
 
     table_metadata = table_name_to_metadata(table_name)
