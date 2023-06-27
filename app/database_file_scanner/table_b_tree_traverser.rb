@@ -74,6 +74,16 @@ class DatabaseFileScanner
     end
 
     def get_records_in_leaf(leaf_page_index:, columns:, primary_index_key:)
+      first_offset = 0 # from the beginning of this page
+      first_offset += HEADER_LENGTH if leaf_page_index == 1 # pages are 1-indexed.
+
+      @file.seek(self.file_offset_from_page_offset(leaf_page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
+      page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
+
+      unless page_type == 0x0d
+        raise StandardError.new("Page #{leaf_page_index} (page_type=#{page_type}) is not a table leaf. ")
+      end
+
       first_offset = 0
       first_offset += HEADER_LENGTH if leaf_page_index == 1 # pages are 1-indexed.
 
