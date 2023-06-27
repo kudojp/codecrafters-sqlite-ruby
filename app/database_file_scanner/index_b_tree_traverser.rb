@@ -22,14 +22,14 @@ class DatabaseFileScanner
     # This returns a list of page indexes of table leaf node where the keys you are looking for exist.
     def get_page_indexes_of_table_records
       @page_indexes_of_table_records = Set.new
-      self.traverse_to_find_page_indexes_of_table_records(@root_page_index)
+      self.traverse_to_find_page_indexes_of_table_records(page_index: @root_page_index)
       print "## page_indexes_of_table_records: #{@page_indexes_of_table_records} ##\n"
       @page_indexes_of_table_records
     end
 
     private
 
-    def traverse_to_find_page_indexes_of_table_records(page_index)
+    def traverse_to_find_page_indexes_of_table_records(page_index:)
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -43,12 +43,12 @@ class DatabaseFileScanner
 
       if page_type == 0x02 # an interior index b-tree page
         self.child_page_indexes(page_index).each do |child_page_index|
-          self.traverse_to_find_page_indexes_of_table_records(child_page_index)
+          self.traverse_to_find_page_indexes_of_table_records(page_index: child_page_index)
         end
         return
       end
 
-      raise StandardError.new("Page type: #{page_type} is not for a node in B-tree index.")
+      raise StandardError.new("Page type: #{page_type} of page (#{page_index}) is not for a node in B-tree index.")
     end
 
     def append_page_indexes_in_leaf_index_node(page_index)
@@ -155,9 +155,9 @@ class DatabaseFileScanner
         1 => [1, lambda{|file| file.read(1).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
         2 => [2, lambda{|file| file.read(2).unpack("n")[0]}], # n: big endian unsigned 16bit
         3 => [3, lambda{|file|                                #    big-endian 24-bit twos-complement integer.
-          first_two_bytes = file.read(1).unpack("C")[0]
-          last_one_byte = file.read(2).unpack("n")[0]
-          first_two_bytes * 2**8 + last_one_byte
+          # ref. https://dormolin.livedoor.blog/archives/52185510.html
+          puts "@@@@@@@@@ WARNING(index traverser): This should be fixed @@@@@@@@@"
+          3
         }],
         4 => [4, lambda{|file| file.read(4).unpack("N")[0]}], # N: big endian unsigned 32bit
         9 => [0, lambda{|_file| 1}]

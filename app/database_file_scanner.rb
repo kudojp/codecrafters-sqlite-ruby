@@ -24,7 +24,12 @@ class DatabaseFileScanner
     table_info = self.sqlite_schema.tables.find{|tbl| tbl.fetch("name") == table_name}
     table_root_page_index = table_info.fetch("rootpage")
 
-    TableBTreeTraverser.new(@file, self.page_size, table_root_page_index).cnt_records
+    TableBTreeTraverser.new(
+      file: @file,
+      page_size: self.page_size
+    ).cnt_records_in_table(
+      root_page_index: table_root_page_index
+    )
   end
 
   def get_records(table_name, filtering_by_secondary_index=nil)
@@ -45,12 +50,12 @@ class DatabaseFileScanner
 
     page_indexes_of_table_records.each_with_object([]) do |table_leaf_page_index, records|
       records += TableBTreeTraverser.new(
-        @file,
-        self.page_size,
-        table_leaf_page_index
-      ).get_records(
-        table_metadata.fetch(:column_names),
-        table_metadata.fetch(:col_primary_index_key)
+        file: @file,
+        page_size: self.page_size,
+      ).get_records_in_leaf(
+        leaf_page_index: table_leaf_page_index,
+        columns: table_metadata.fetch(:column_names),
+        primary_index_key: table_metadata.fetch(:col_primary_index_key)
       )
     end
   end
@@ -59,12 +64,12 @@ class DatabaseFileScanner
     table_metadata = table_name_to_metadata(table_name)
 
     TableBTreeTraverser.new(
-      @file,
-      self.page_size,
-      table_metadata.fetch(:root_page_index)
-    ).get_records(
-      table_metadata.fetch(:column_names),
-      table_metadata.fetch(:col_primary_index_key)
+      file: @file,
+      page_size: self.page_size,
+      ).get_records_in_table(
+      root_page_index: table_metadata.fetch(:root_page_index),
+      columns: table_metadata.fetch(:column_names),
+      primary_index_key: table_metadata.fetch(:col_primary_index_key)
     )
   end
 
@@ -80,10 +85,10 @@ class DatabaseFileScanner
   end
 
   def get_sqlite_schema
-    traverser = TableBTreeTraverser.new(@file, page_size, SQLITE_SCHEMA_PAGE_NUMBER)
+    traverser = TableBTreeTraverser.new(file: @file, page_size: page_size)
 
     Database::SqliteSchema.new(
-      traverser.get_records(Database::SqliteSchema::TABLE_ATTRIBUTES, nil)
+      traverser.get_records_in_table(root_page_index: SQLITE_SCHEMA_PAGE_NUMBER, columns: Database::SqliteSchema::TABLE_ATTRIBUTES, primary_index_key:nil)
     )
   end
 
