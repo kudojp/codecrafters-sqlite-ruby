@@ -51,6 +51,9 @@ class DatabaseFileScanner
       @records_in_table
     end
 
+    private
+
+    # TODO this can be included in #get_records_in_table
     def traverse_to_find_records(page_index:, columns:, primary_index_key:)
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
@@ -136,8 +139,6 @@ class DatabaseFileScanner
 
       records_in_leaf
     end
-
-    private
 
     def child_page_indexes(page_index)
       first_offset = 0

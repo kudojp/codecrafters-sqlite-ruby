@@ -53,8 +53,8 @@ class DatabaseFileScanner
       TableBTreeTraverser.new(
         file: @file,
         page_size: self.page_size,
-      ).get_records_in_leaf(
-        leaf_page_index: table_leaf_page_index,
+      ).get_records_in_table(
+        root_page_index: table_leaf_page_index,
         columns: table_metadata.fetch(:column_names),
         primary_index_key: table_metadata.fetch(:col_primary_index_key)
       ).each do |record|
