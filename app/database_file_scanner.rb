@@ -103,12 +103,13 @@ class DatabaseFileScanner
     # table_info is like:
     #    "CREATE TABLE butterscotch (id integer primary key, grape text,coffee text,watermelon text,strawberry text,vanilla text)"
     columns_defs = table_info.fetch("sql").split(Regexp.union(["(", ")"]))[1].split(",")
+    # TODO: Fix so that this can understand: "CREATE TABLE companies\n(\n\tid integer primary key autoincrement\n, name text, \"size range\" text)"
     column_names = columns_defs.map{|col_def| col_def.split()[0]}
     pk_columns_def = columns_defs.find{|col_def| col_def.include? "integer primary key"}
     col_primary_index_key = pk_columns_def ? pk_columns_def.split()[0] : nil
 
     @table_metadata = {}
-    @table_metadata[:table_name] = {
+    @table_metadata[table_name] = {
       root_page_index: table_root_page_index,
       column_names: column_names,
       col_primary_index_key: col_primary_index_key
