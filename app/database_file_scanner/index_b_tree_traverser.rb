@@ -16,7 +16,7 @@ class DatabaseFileScanner
       @page_size = page_size
     end
 
-    # This returns a list of page indexes of table leaf node where the keys you are looking for exist.
+    # This returns a list of rowids in the original table.
     def get_rowids(root_page_index:, searching_key:)
       @rowids = Set.new
       self.search_in_tree(root_page_index: root_page_index, searching_key: searching_key)
@@ -123,14 +123,14 @@ class DatabaseFileScanner
         payload_offset += 1 # I don't know what this is.
 
         # payload
-        ###  encoding type of key
+        ### type encoding of `key`
         @file.seek(file_offset_from_page_offset(page_index, payload_offset))
         key_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, payload_offset)).read
         key_offset = payload_offset + used_bytes
 
         key_offset += 1 # I don't know what this is.
 
-        ### encoding value of `key`
+        ### value encoding of `key`
         _key_byte_length, key_read_lambda = serial_type(key_serial_type)
         @file.seek(file_offset_from_page_offset(page_index, key_offset))
         key = @file.read(_key_byte_length)
