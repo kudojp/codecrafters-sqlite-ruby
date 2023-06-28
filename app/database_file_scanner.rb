@@ -50,15 +50,15 @@ class DatabaseFileScanner
     table_metadata = table_name_to_metadata(table_name)
 
     records = []
-    # TODO: implement and use a way to collect records when filtering with primary key.
     record_rowids.each do |rowid|
       TableBTreeTraverser.new(
         file: @file,
         page_size: self.page_size,
       ).get_records_in_table(
-        root_page_index: table_leaf_page_index,
+        root_page_index: table_metadata.fetch(:root_page_index),
         columns: table_metadata.fetch(:column_names),
-        primary_index_key: table_metadata.fetch(:col_primary_index_key)
+        primary_index_key: table_metadata.fetch(:col_primary_index_key),
+        pk_values: record_rowids
       ).each do |record|
         records << record
       end

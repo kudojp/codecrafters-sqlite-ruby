@@ -41,20 +41,24 @@ class DatabaseFileScanner
     #   {type: "type1", name: "name1", tbl_name: "tbl_name1", rootpage: 111, sql: "sql1"},
     #   {type: "type2", name: "name2", tbl_name: "tbl_name2", rootpage: 222, sql: "sql2"},
     # ]
-    def get_records_in_table(root_page_index:, columns:, primary_index_key:)
+    def get_records_in_table(root_page_index:, columns:, primary_index_key:, pk_values: nil)
       if !primary_index_key.nil? && !columns.include?(primary_index_key)
         raise StandardError.new("You specified #{primary_index_key} as a primary key, but it is not included in columns #{columns}.")
       end
 
+      if !primary_index_key && pk_values
+        raise StandardError.new("You specified pk_values, but you did not specify primary_index_key.")
+      end
+
       @records_in_table = []
-      self.collect_in_tree(page_index: root_page_index, columns: columns, primary_index_key: primary_index_key)
+      self.collect_in_tree(page_index: root_page_index, columns: columns, primary_index_key: primary_index_key, pk_values: pk_values)
       @records_in_table
     end
 
     private
 
     # TODO this can be included in #get_records_in_table
-    def collect_in_tree(page_index:, columns:, primary_index_key:)
+    def collect_in_tree(page_index:, columns:, primary_index_key:, pk_values:)
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -62,13 +66,13 @@ class DatabaseFileScanner
       page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
       if page_type == 0x0d # a leaf table b-tree page
-        @records_in_table += self.collect_in_leaf(leaf_page_index: page_index, columns: columns, primary_index_key: primary_index_key)
+        @records_in_table += self.collect_in_leaf(leaf_page_index: page_index, columns: columns, primary_index_key: primary_index_key, pk_values: pk_values)
         return
       end
 
       if page_type == 0x05 # an interior table b-tree page
         child_page_indexes(page_index).each do |child_page_index|
-          self.collect_in_tree(page_index: child_page_index, columns: columns, primary_index_key: primary_index_key)
+          self.collect_in_tree(page_index: child_page_index, columns: columns, primary_index_key: primary_index_key, pk_values: pk_values)
         end
         return
       end
@@ -76,7 +80,7 @@ class DatabaseFileScanner
       raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.")
     end
 
-    def collect_in_leaf(leaf_page_index:, columns:, primary_index_key:)
+    def collect_in_leaf(leaf_page_index:, columns:, primary_index_key:, pk_values:)
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if leaf_page_index == 1 # pages are 1-indexed.
 
@@ -107,6 +111,8 @@ class DatabaseFileScanner
 
         row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, cell_row_id_offset)).read
         cell_payload_offset = cell_row_id_offset + used_bytes
+
+        next if pk_values && !pk_values.include?(row_id)
 
         cell_payload_offset += 1 # I don't know what this 1 byte is.
 
