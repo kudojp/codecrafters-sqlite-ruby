@@ -27,6 +27,7 @@ class PlanAndExecutor
 
     # SELECT col1, col2, col3
     selected_column_names = selected_columns.map{|sel_col| sel_col.col_def.name }
+    # TODO: Do this column filtering while traversing B-tree table/index tree.
     records.map{|record| record_str(record, selected_column_names)}
   end
 
