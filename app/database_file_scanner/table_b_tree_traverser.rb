@@ -194,11 +194,8 @@ class DatabaseFileScanner
         1 => [1, lambda{|file| file.read(1).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
         2 => [2, lambda{|file| file.read(2).unpack("n")[0]}], # n: big endian unsigned 16bit
         3 => [3, lambda{|file|                                #    big-endian 24-bit twos-complement integer.
-          # first_two_bytes = file.read(1).unpack("C")[0]
-          # last_one_byte = file.read(2).unpack("n")[0]
-          # first_two_bytes * 2**8 + last_one_byte
-          # puts "@@@@@@@@@ WARNING(tree traverser): This should be fixed @@@@@@@@@"
-          3
+          # ref. https://dormolin.livedoor.blog/archives/52185510.html
+          "\x00#{file.read(3)}".unpack("N")[0]
         }],
         4 => [4, lambda{|file| file.read(4).unpack("N>")[0]}], # N: big endian unsigned 32bit
         6 => [6, lambda{|file| file.read(6).unpack("q>")[0]}], # N: big endian unsigned 64bit
