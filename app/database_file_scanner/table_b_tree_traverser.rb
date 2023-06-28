@@ -47,14 +47,14 @@ class DatabaseFileScanner
       end
 
       @records_in_table = []
-      traverse_to_find_records(page_index: root_page_index, columns: columns, primary_index_key: primary_index_key)
+      self.collect_in_tree(page_index: root_page_index, columns: columns, primary_index_key: primary_index_key)
       @records_in_table
     end
 
     private
 
     # TODO this can be included in #get_records_in_table
-    def traverse_to_find_records(page_index:, columns:, primary_index_key:)
+    def collect_in_tree(page_index:, columns:, primary_index_key:)
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -62,13 +62,13 @@ class DatabaseFileScanner
       page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
       if page_type == 0x0d # a leaf table b-tree page
-        @records_in_table += self.get_records_in_leaf(leaf_page_index: page_index, columns: columns, primary_index_key: primary_index_key)
+        @records_in_table += self.collect_in_leaf(leaf_page_index: page_index, columns: columns, primary_index_key: primary_index_key)
         return
       end
 
       if page_type == 0x05 # an interior table b-tree page
         child_page_indexes(page_index).each do |child_page_index|
-          self.traverse_to_find_records(page_index: child_page_index, columns: columns, primary_index_key: primary_index_key)
+          self.collect_in_tree(page_index: child_page_index, columns: columns, primary_index_key: primary_index_key)
         end
         return
       end
@@ -76,7 +76,7 @@ class DatabaseFileScanner
       raise StandardError.new("Page type: #{page_type} is not for a node in B-tree table.")
     end
 
-    def get_records_in_leaf(leaf_page_index:, columns:, primary_index_key:)
+    def collect_in_leaf(leaf_page_index:, columns:, primary_index_key:)
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if leaf_page_index == 1 # pages are 1-indexed.
 
@@ -191,11 +191,11 @@ class DatabaseFileScanner
           # first_two_bytes = file.read(1).unpack("C")[0]
           # last_one_byte = file.read(2).unpack("n")[0]
           # first_two_bytes * 2**8 + last_one_byte
-          puts "@@@@@@@@@ WARNING(tree traverser): This should be fixed @@@@@@@@@"
+          # puts "@@@@@@@@@ WARNING(tree traverser): This should be fixed @@@@@@@@@"
           3
         }],
-        4 => [4, lambda{|file| file.read(4).unpack("N")[0]}], # N: big endian unsigned 32bit
-        6 => [6, lambda{|file| file.read(6).unpack("q>")[0]}], # N: big endian unsigned 32bit
+        4 => [4, lambda{|file| file.read(4).unpack("N>")[0]}], # N: big endian unsigned 32bit
+        6 => [6, lambda{|file| file.read(6).unpack("q>")[0]}], # N: big endian unsigned 64bit
         9 => [0, lambda{|_file| 1}]
       }
       mapping.fetch(serial_type)
