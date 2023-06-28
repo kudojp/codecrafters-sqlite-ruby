@@ -1,3 +1,6 @@
+⚠️ TODO: Do refactoring!
+-----
+
 [![progress-banner](https://app.codecrafters.io/progress/sqlite/d5146cc7-8501-4af4-98c0-93a8224c3b77)](https://app.codecrafters.io/users/kudojp)
 
 This is a starting point for Ruby solutions to the
