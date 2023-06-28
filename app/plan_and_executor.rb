@@ -15,10 +15,10 @@ class PlanAndExecutor
     end
 
     # FROM table (WHERE predicate)
-    filtering_by_secondary_index, all_filtering_conditions = best_scanning_pattern(table_name, @ast.where_clause)
+    filtering_by_secondary_index, other_filtering_conditions = best_scanning_pattern(table_name, @ast.where_clause)
     records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index) # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :searching_key)
     # TODO: Do this filtering while traversing B-tree table/index tree.
-    records = records.select{|record| all_filtering_conditions.call(record)} if all_filtering_conditions
+    records = records.select{|record| other_filtering_conditions.call(record)} if other_filtering_conditions
 
     # SELECT *
     if select_all?(selected_columns)
@@ -63,22 +63,15 @@ class PlanAndExecutor
     filtering_col_value = where_clause_node.predicate[0].right.value
 
     applicable_index = @db_file_scanner.sqlite_schema.applicable_index(table_name, filtering_col_name)
-    filtering_by_secondary_index =
-      if applicable_index
-        # For now, it assumes that using index scanning is the fastest pattern.
-        {
-          index_tree_root_page: applicable_index.fetch("rootpage"),
-          searching_key: filtering_col_value,
-        }
-      else
+    if applicable_index
+      # For now, it assumes that using index scanning is the fastest pattern.
+      return [
+        { index_tree_root_page: applicable_index.fetch("rootpage"), searching_key: filtering_col_value },
         nil
-      end
+      ]
+    end
 
-    all_filtering_conditions = lambda{|record|
-    # puts record
-    record.fetch(filtering_col_name) == filtering_col_value}
-
-    [filtering_by_secondary_index, all_filtering_conditions]
+    [nil, lambda{|record| record.fetch(filtering_col_name) == filtering_col_value}]
   end
 
   def record_str(record, columns)
