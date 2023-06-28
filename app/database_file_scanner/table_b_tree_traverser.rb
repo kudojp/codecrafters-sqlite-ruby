@@ -107,12 +107,12 @@ class DatabaseFileScanner
 
         cell_payload_size_offset = cell_offset # from index=0 in this page
         _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, cell_payload_size_offset)).read
-        cell_row_id_offset = cell_payload_size_offset + used_bytes
+        cell_rowid_offset = cell_payload_size_offset + used_bytes
 
-        row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, cell_row_id_offset)).read
-        cell_payload_offset = cell_row_id_offset + used_bytes
+        rowid, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, cell_rowid_offset)).read
+        cell_payload_offset = cell_rowid_offset + used_bytes
 
-        next if pk_values && !pk_values.include?(row_id)
+        next if pk_values && !pk_values.include?(rowid)
 
         cell_payload_offset += 1 # I don't know what this 1 byte is.
 
@@ -132,7 +132,7 @@ class DatabaseFileScanner
         col_to_serial_type.each do |col, (used_bytes, read_lambda)|
           record[col] =
             if col == primary_index_key
-              row_id
+              rowid
             else
               @file.seek(file_offset_from_page_offset(leaf_page_index, curr_offset))
               read_lambda.call(@file)
@@ -156,7 +156,7 @@ class DatabaseFileScanner
       child_page_indexes = []
 
       # For each record,,,
-      prev_row_id = -1
+      prev_rowid = -1
       num_cells.times do |nth_cell|
         cell_pointer_offset = HEADER_LENGTH_IN_INTERIOR_PAGE + nth_cell * 2 # from first_offset
         @file.seek(file_offset_from_page_offset(page_index, first_offset + cell_pointer_offset))
@@ -166,8 +166,8 @@ class DatabaseFileScanner
         @file.seek(file_offset_from_page_offset(page_index, cell_offset))
         child_page_index = @file.read(4).unpack("N")[0] # N: big endian unsigned 32bit
 
-        row_id_index = cell_offset + 4
-        row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, row_id_index)).read
+        rowid_index = cell_offset + 4
+        rowid, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, rowid_index)).read
 
         ## You are searching for rowid=[13,14,15], then
         #----------------------------------------
@@ -184,10 +184,10 @@ class DatabaseFileScanner
         #  o    x    x
         # ---------------------------------------
         if pk_values
-          pk_values_in_child = pk_values.select{|pk_value| prev_row_id <= pk_value && pk_value <= row_id}
+          pk_values_in_child = pk_values.select{|pk_value| prev_rowid <= pk_value && pk_value <= rowid}
           child_page_indexes << [child_page_index, pk_values_in_child] if pk_values_in_child.length > 0
-          return child_page_indexes if pk_values.max() < row_id
-          prev_row_id = row_id
+          return child_page_indexes if pk_values.max() < rowid
+          prev_rowid = rowid
         else
           child_page_indexes << [child_page_index, nil]
         end
