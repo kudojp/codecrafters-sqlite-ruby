@@ -71,8 +71,8 @@ class DatabaseFileScanner
       end
 
       if page_type == 0x05 # an interior table b-tree page
-        child_page_indexes(page_index).each do |child_page_index|
-          self.collect_in_tree(page_index: child_page_index, columns: columns, primary_index_key: primary_index_key, pk_values: pk_values)
+        child_page_indexes(page_index: page_index, pk_values: pk_values).each do |child_page_index, child_pk_values|
+          self.collect_in_tree(page_index: child_page_index, columns: columns, primary_index_key: primary_index_key, pk_values: child_pk_values)
         end
         return
       end
@@ -146,7 +146,7 @@ class DatabaseFileScanner
       records_in_leaf
     end
 
-    def child_page_indexes(page_index)
+    def child_page_indexes(page_index:, pk_values:)
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -156,6 +156,7 @@ class DatabaseFileScanner
       child_page_indexes = []
 
       # For each record,,,
+      prev_row_id = -1
       num_cells.times do |nth_cell|
         cell_pointer_offset = HEADER_LENGTH_IN_INTERIOR_PAGE + nth_cell * 2 # from first_offset
         @file.seek(file_offset_from_page_offset(page_index, first_offset + cell_pointer_offset))
@@ -164,13 +165,43 @@ class DatabaseFileScanner
 
         @file.seek(file_offset_from_page_offset(page_index, cell_offset))
         child_page_index = @file.read(4).unpack("N")[0] # N: big endian unsigned 32bit
-        child_page_indexes << child_page_index
+
+        row_id_index = cell_offset + 4
+        row_id, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, row_id_index)).read
+
+        ## You are searching for rowid=[13,14,15], then
+        #----------------------------------------
+        #     12   14   16
+        #   x    o    o     x
+        #----------------------------------------
+        #    13   14   17
+        #   o    o    o    x
+        #----------------------------------------
+        #    13   14   15
+        #  o    o    o    o
+        #----------------------------------------
+        #    18   20
+        #  o    x    x
+        # ---------------------------------------
+        if pk_values
+          pk_values_in_child = pk_values.select{|pk_value| prev_row_id <= pk_value && pk_value <= row_id}
+          child_page_indexes << [child_page_index, pk_values_in_child] if pk_values_in_child.length > 0
+          return child_page_indexes if pk_values.max() < row_id
+          prev_row_id = row_id
+        else
+          child_page_indexes << [child_page_index, nil]
+        end
       end
 
       @file.seek(self.file_offset_from_page_offset(page_index, first_offset + RIGHTMOST_CHILD_POINTER_OFFSET_IN_INTERIOR_PAGE))
       rightmost_child_page_index = @file.read(RIGHTMOST_CHILD_POINTER_LENGTH_IN_INTERIOR_PAGE).unpack("N")[0] # N: big endian unsigned 32bit
 
-      child_page_indexes << rightmost_child_page_index
+      if pk_values
+        pk_values_in_child = pk_values.select{|pk_value| rightmost_child_page_index <= pk_value}
+        child_page_indexes << [rightmost_child_page_index, pk_values_in_child] if pk_values_in_child.length > 0
+      else
+        child_page_indexes << [rightmost_child_page_index, nil]
+      end
       child_page_indexes
     end
 

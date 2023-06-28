@@ -49,22 +49,15 @@ class DatabaseFileScanner
 
     table_metadata = table_name_to_metadata(table_name)
 
-    records = []
-    record_rowids.each do |rowid|
-      TableBTreeTraverser.new(
-        file: @file,
-        page_size: self.page_size,
-      ).get_records_in_table(
-        root_page_index: table_metadata.fetch(:root_page_index),
-        columns: table_metadata.fetch(:column_names),
-        primary_index_key: table_metadata.fetch(:col_primary_index_key),
-        pk_values: record_rowids
-      ).each do |record|
-        records << record
-      end
-    end
-
-    records
+    TableBTreeTraverser.new(
+      file: @file,
+      page_size: self.page_size,
+    ).get_records_in_table(
+      root_page_index: table_metadata.fetch(:root_page_index),
+      columns: table_metadata.fetch(:column_names),
+      primary_index_key: table_metadata.fetch(:col_primary_index_key),
+      pk_values: record_rowids
+    )
   end
 
   def get_records_by_full_scan(table_name)
