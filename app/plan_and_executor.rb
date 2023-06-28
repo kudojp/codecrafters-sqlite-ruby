@@ -74,7 +74,7 @@ class PlanAndExecutor
         nil
       end
 
-    all_filtering_conditions = lambda{|record| 
+    all_filtering_conditions = lambda{|record|
     # puts record
     record.fetch(filtering_col_name) == filtering_col_value}
 
