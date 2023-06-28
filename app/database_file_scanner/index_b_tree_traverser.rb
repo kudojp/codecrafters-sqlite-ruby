@@ -68,42 +68,27 @@ class DatabaseFileScanner
         _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
         cell_payload_offset = cell_payload_size_offset + used_bytes
 
-        curr_offset = cell_payload_offset + 1 # I don't know what this one byte is.
-
-        # encoding of `page index of the table leaf`
+        # Payload
+        curr_offset = cell_payload_offset + 1 # I don't know what this 1 byte is.
+        ### encoding of `key`
         @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
-        page_of_table_leaf_byte_length, page_of_table_leaf_lambda = serial_type(col_serial_type)
+        key_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        key_byte_length, key_read_lambda = serial_type(key_serial_type)
         curr_offset += used_bytes
 
-        # encoding of `key`
-        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
-        key_byte_length, key_read_lambda = serial_type(col_serial_type)
-        curr_offset += used_bytes
 
-        # value of `key`
+        curr_offset += 1 # I don't know what this 1 byte is.
+        ### value of `key`
         @file.seek(file_offset_from_page_offset(page_index, curr_offset))
         key = key_read_lambda.call(@file)
-        # print("\n####### key=#{key}\n")
         curr_offset += key_byte_length
 
-        ## value of `page index of the table leaf`
-        # @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        # page = page_of_table_leaf_lambda.call(@file)
-        # curr_offset += page_of_table_leaf_byte_length
-
-        # value of `page index of the table leaf`
-        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        page, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
-        curr_offset += used_bytes
-
+        ## find `page` from somewhere probably in the payload
         @page_indexes_of_table_records << page
       end
     end
 
     def child_page_indexes(page_index)
-      # puts "\n### going down the index and now I am in interior page=#{page_index}"
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
