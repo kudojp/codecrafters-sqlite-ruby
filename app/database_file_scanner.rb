@@ -39,17 +39,19 @@ class DatabaseFileScanner
 
   # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :searching_key)
   def get_records_by_index_scan(table_name, filtering_by_secondary_index)
-    page_indexes_of_table_records = IndexBTreeTraverser.new(
-      @file,
-      self.page_size,
-      filtering_by_secondary_index.fetch(:index_tree_root_page),
-      filtering_by_secondary_index.fetch(:searching_key),
-    ).get_page_indexes_of_table_records
+    record_rowids = IndexBTreeTraverser.new(
+      file: @file,
+      page_size: self.page_size,
+    ).get_rowids(
+      root_page_index: filtering_by_secondary_index.fetch(:index_tree_root_page),
+      searching_key: filtering_by_secondary_index.fetch(:searching_key),
+    )
 
     table_metadata = table_name_to_metadata(table_name)
 
     records = []
-    page_indexes_of_table_records.each do |table_leaf_page_index|
+    # TODO: implement and use a way to collect records when filtering with primary key.
+    record_rowids.each do |rowid|
       TableBTreeTraverser.new(
         file: @file,
         page_size: self.page_size,

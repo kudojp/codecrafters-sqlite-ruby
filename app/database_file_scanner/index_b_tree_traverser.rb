@@ -11,46 +11,43 @@ class DatabaseFileScanner
     HEADER_LENGTH_IN_LEAF_PAGE = 8
     HEADER_LENGTH_IN_INTERIOR_PAGE = 12
 
-    def initialize(file, page_size, root_page_index, searching_key)
+    def initialize(file:, page_size:)
       @file = file
       @page_size = page_size
-      @root_page_index = root_page_index
-      # At each interior pages, this lambda function is used to decide which child page to go down.
-      @searching_key = searching_key
     end
 
     # This returns a list of page indexes of table leaf node where the keys you are looking for exist.
-    def get_page_indexes_of_table_records
-      @page_indexes_of_table_records = Set.new
-      self.traverse_to_find_page_indexes_of_table_records(page_index: @root_page_index)
-      @page_indexes_of_table_records
+    def get_rowids(root_page_index:, searching_key:)
+      @rowids = Set.new
+      self.search_in_tree(root_page_index: root_page_index, searching_key: searching_key)
+      @rowids
     end
 
     private
 
-    def traverse_to_find_page_indexes_of_table_records(page_index:)
+    def search_in_tree(root_page_index:, searching_key:)
       first_offset = 0 # from the beginning of this page
-      first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
+      first_offset += HEADER_LENGTH if root_page_index == 1 # pages are 1-indexed.
 
-      @file.seek(self.file_offset_from_page_offset(page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
+      @file.seek(self.file_offset_from_page_offset(root_page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
       page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
       if page_type == 0x0a # a leaf index b-tree page
-        self.append_page_indexes_in_leaf_index_node(page_index)
+        self.search_in_leaf(page_index: root_page_index, searching_key: searching_key)
         return
       end
 
       if page_type == 0x02 # an interior index b-tree page
-        self.child_page_indexes(page_index).each do |child_page_index|
-          self.traverse_to_find_page_indexes_of_table_records(page_index: child_page_index)
+        self.child_page_indexes(page_index: root_page_index, searching_key: searching_key).each do |child_page_index|
+          self.search_in_tree(root_page_index: child_page_index, searching_key: searching_key)
         end
         return
       end
 
-      raise StandardError.new("Page type: #{page_type} of page (#{page_index}) is not for a node in B-tree index.")
+      raise StandardError.new("Page type: #{page_type} of page (#{root_page_index}) is not for a node in B-tree index.")
     end
 
-    def append_page_indexes_in_leaf_index_node(page_index)
+    def search_in_leaf(page_index:, searching_key:)
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -88,17 +85,17 @@ class DatabaseFileScanner
         key = key_read_lambda.call(@file)
         curr_offset += key_byte_length
 
-        next unless key == @searching_key
+        next unless key == searching_key
 
         ### value of `rowid`
         @file.seek(file_offset_from_page_offset(page_index, curr_offset))
         rowid = rowid_read_lambda.call(@file)
 
-        @page_indexes_of_table_records << rowid
+        @rowids << rowid
       end
     end
 
-    def child_page_indexes(page_index)
+    def child_page_indexes(page_index:, searching_key:)
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
@@ -152,8 +149,8 @@ class DatabaseFileScanner
         #    18   20
         #  o    x    x
         # ---------------------------------------
-        ret << left_child_page_index if @searching_key <= key
-        return ret if @searching_key < key
+        ret << left_child_page_index if searching_key <= key
+        return ret if searching_key < key
       end
 
       @file.seek(self.file_offset_from_page_offset(page_index, first_offset + RIGHTMOST_CHILD_POINTER_OFFSET_IN_INTERIOR_PAGE))
