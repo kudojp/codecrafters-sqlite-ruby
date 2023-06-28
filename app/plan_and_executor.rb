@@ -17,6 +17,7 @@ class PlanAndExecutor
     # FROM table (WHERE predicate)
     filtering_by_secondary_index, all_filtering_conditions = best_scanning_pattern(table_name, @ast.where_clause)
     records = @db_file_scanner.get_records(table_name, filtering_by_secondary_index) # filtering_by_secondary_index has 2 keys (:index_tree_root_page, :searching_key)
+    # TODO: Do this filtering while traversing B-tree table/index tree.
     records = records.select{|record| all_filtering_conditions.call(record)} if all_filtering_conditions
 
     # SELECT *
