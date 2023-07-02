@@ -131,10 +131,10 @@ class DatabaseFileScanner
         ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
         cell_payload_size_offset = cell_offset # from index=0 in this page
-        _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, cell_payload_size_offset)).read
+        _payload_size, used_bytes = VarIntScanner.new(page[cell_payload_size_offset...]).read
         cell_rowid_offset = cell_payload_size_offset + used_bytes
 
-        rowid, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, cell_rowid_offset)).read
+        rowid, used_bytes = VarIntScanner.new(page[cell_rowid_offset...]).read
         cell_payload_offset = cell_rowid_offset + used_bytes
 
         next if pk_values && !pk_values.include?(rowid)
@@ -146,8 +146,7 @@ class DatabaseFileScanner
 
         # Type encodings for each column
         columns.each_with_index do |col_name, nth_col|
-          @file.seek(file_offset_from_page_offset(leaf_page_index, curr_offset))
-          col_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(leaf_page_index, curr_offset)).read
+          col_serial_type, used_bytes = VarIntScanner.new(page[curr_offset..]).read
           col_to_serial_type[col_name] = serial_type(col_serial_type)
           curr_offset += used_bytes
         end
@@ -203,7 +202,7 @@ class DatabaseFileScanner
         ).unpack("N")[0] # N: big endian unsigned 32bit
 
         rowid_index = cell_offset + 4
-        rowid, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, rowid_index)).read
+        rowid, used_bytes = VarIntScanner.new(page[rowid_index..]).read
 
         ## You are searching for rowid=[13,14,15], then
         #----------------------------------------

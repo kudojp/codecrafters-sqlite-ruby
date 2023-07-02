@@ -77,21 +77,19 @@ class DatabaseFileScanner
         ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
         cell_payload_size_offset = cell_offset
-        _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
+        _payload_size, used_bytes = VarIntScanner.new(page[cell_payload_size_offset...]).read
         cell_payload_offset = cell_payload_size_offset + used_bytes
 
         curr_offset = cell_payload_offset + 1 # I don't know what this 1 byte is.
 
         # Payload
         ### encoding of `key`
-        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        key_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        key_serial_type, used_bytes = VarIntScanner.new(page[curr_offset...]).read
         key_byte_length, key_read_lambda = serial_type(key_serial_type)
         curr_offset += used_bytes
 
         ### encoding of `rowid`
-        @file.seek(file_offset_from_page_offset(page_index, curr_offset))
-        rowid_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, curr_offset)).read
+        rowid_serial_type, used_bytes = VarIntScanner.new(page[curr_offset...]).read
         rowid_byte_length, rowid_read_lambda = serial_type(rowid_serial_type)
         curr_offset += used_bytes
 
@@ -140,15 +138,14 @@ class DatabaseFileScanner
         payload_size_offset = left_child_ptr_offset + 4
 
         # (varint) Number of bytes of payload
-        payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, payload_size_offset)).read
+        payload_size, used_bytes = VarIntScanner.new(page[payload_size_offset...]).read
         payload_offset = payload_size_offset + used_bytes
 
         payload_offset += 1 # I don't know what this is.
 
         # payload
         ### type encoding of `key`
-        @file.seek(file_offset_from_page_offset(page_index, payload_offset))
-        key_serial_type, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, payload_offset)).read
+        key_serial_type, used_bytes = VarIntScanner.new(page[payload_offset...]).read
         key_offset = payload_offset + used_bytes
 
         key_offset += 1 # I don't know what this is.
