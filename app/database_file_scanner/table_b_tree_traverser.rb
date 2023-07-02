@@ -158,8 +158,7 @@ class DatabaseFileScanner
             if col == primary_index_key
               rowid
             else
-              @file.seek(file_offset_from_page_offset(leaf_page_index, curr_offset))
-              read_lambda.call(@file)
+              read_lambda.call(page[curr_offset..])
             end
           curr_offset += used_bytes
         end
@@ -257,27 +256,27 @@ class DatabaseFileScanner
       # blob
       if (12 <= serial_type) && (serial_type % 2 == 0)
         byte_length = (serial_type-12)/2
-        return byte_length, lambda{|file| file.read(byte_length).unpack("a*")[0]}
+        return byte_length, lambda{|bytes| bytes[...byte_length].unpack("a*")[0]}
       end
 
       # text
       if (13 <= serial_type) && (serial_type % 2 == 1)
         byte_length = (serial_type-13)/2
-        return byte_length, lambda{|file| file.read(byte_length).unpack("a*")[0]}
+        return byte_length, lambda{|bytes| bytes[...byte_length].unpack("a*")[0]}
       end
 
       # TODO: add key=0~11 here.
       mapping = {
-        0 => [0, lambda{|_file| nil}],
-        1 => [1, lambda{|file| file.read(1).unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
-        2 => [2, lambda{|file| file.read(2).unpack("n")[0]}], # n: big endian unsigned 16bit
-        3 => [3, lambda{|file|                                #    big-endian 24-bit twos-complement integer.
+        0 => [0, lambda{|_bytes| nil}],
+        1 => [1, lambda{|bytes| bytes[...1].unpack("C")[0]}], # C: unsigned char (8-bit) in network byte order (= big-endian)
+        2 => [2, lambda{|bytes| bytes[...2].unpack("n")[0]}], # n: big endian unsigned 16bit
+        3 => [3, lambda{|bytes|                                #    big-endian 24-bit twos-complement integer.
           # ref. https://dormolin.livedoor.blog/archives/52185510.html
-          "\x00#{file.read(3)}".unpack("N")[0]
+          "\x00#{bytes[...3]}".unpack("N")[0]
         }],
-        4 => [4, lambda{|file| file.read(4).unpack("N>")[0]}], # N: big endian unsigned 32bit
-        6 => [6, lambda{|file| file.read(6).unpack("q>")[0]}], # N: big endian unsigned 64bit
-        9 => [0, lambda{|_file| 1}]
+        4 => [4, lambda{|bytes| bytes[...4].unpack("N>")[0]}], # N: big endian unsigned 32bit
+        6 => [6, lambda{|bytes| bytes[...6].unpack("q>")[0]}], # N: big endian unsigned 64bit
+        9 => [0, lambda{|_bytes| 1}]
       }
       mapping.fetch(serial_type)
     end
