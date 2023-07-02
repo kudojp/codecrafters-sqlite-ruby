@@ -26,11 +26,16 @@ class DatabaseFileScanner
     private
 
     def search_in_tree(root_page_index:, searching_key:)
+      page = fetch_page(page_index: root_page_index)
+
       first_offset = 0 # from the beginning of this page
       first_offset += HEADER_LENGTH if root_page_index == 1 # pages are 1-indexed.
 
-      @file.seek(self.file_offset_from_page_offset(root_page_index, first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE))
-      page_type = @file.read(BTREE_PAGE_TYPE_LENGTH_IN_PAGE).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
+      page_type = fetch_bytes_in_page(
+        page: page,
+        offset: first_offset + BTREE_PAGE_TYPE_OFFSET_IN_PAGE,
+        length: BTREE_PAGE_TYPE_LENGTH_IN_PAGE,
+      ).unpack("C")[0] # C: unsigned char (8-bit) in network byte order (= big-endian)
 
       if page_type == 0x0a # a leaf index b-tree page
         self.search_in_leaf(page_index: root_page_index, searching_key: searching_key)
@@ -48,18 +53,28 @@ class DatabaseFileScanner
     end
 
     def search_in_leaf(page_index:, searching_key:)
+      page = fetch_page(page_index: page_index)
+
+      first_offset = 0 # from the beginning of this page
+
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
-      @file.seek(self.file_offset_from_page_offset(page_index, first_offset + NUM_CELLS_OFFSET_IN_PAGE))
-      num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
+      num_cells = fetch_bytes_in_page(
+        page: page,
+        offset: first_offset + NUM_CELLS_OFFSET_IN_PAGE,
+        length: NUM_CELLS_LENGTH_IN_PAGE,
+      ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
       # For each record,,,
       num_cells.times do |nth_cell|
         cell_pointer_offset = HEADER_LENGTH_IN_LEAF_PAGE + nth_cell * 2 # from first_offset
-        @file.seek(file_offset_from_page_offset(page_index, first_offset + cell_pointer_offset))
-        # This cell_offset is from index=0 in this page, not from first_offset.
-        cell_offset = @file.read(2).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
+
+        cell_offset = fetch_bytes_in_page(
+          page: page,
+          offset: first_offset + cell_pointer_offset,
+          length: 2,
+        ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
         cell_payload_size_offset = cell_offset
         _payload_size, used_bytes = VarIntScanner.new(@file, file_offset_from_page_offset(page_index, cell_payload_size_offset)).read
@@ -96,20 +111,28 @@ class DatabaseFileScanner
     end
 
     def child_page_indexes(page_index:, searching_key:)
+      page = fetch_page(page_index: page_index)
+
       first_offset = 0
       first_offset += HEADER_LENGTH if page_index == 1 # pages are 1-indexed.
 
-      @file.seek(self.file_offset_from_page_offset(page_index, first_offset + NUM_CELLS_OFFSET_IN_PAGE))
-      num_cells = @file.read(NUM_CELLS_LENGTH_IN_PAGE).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
+      num_cells = fetch_bytes_in_page(
+        page: page,
+        offset: first_offset + NUM_CELLS_OFFSET_IN_PAGE,
+        length: NUM_CELLS_LENGTH_IN_PAGE,
+      ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
       ret = []
       # For each record,,,
       num_cells.times do |nth_cell|
         # Cell pointer to cell content
         cell_pointer_offset = HEADER_LENGTH_IN_INTERIOR_PAGE + nth_cell * 2 # from first_offset
-        @file.seek(file_offset_from_page_offset(page_index, first_offset + cell_pointer_offset))
-        # This cell_offset is from index=0 in this page, not from first_offset.
-        left_child_ptr_offset = @file.read(2).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
+
+        left_child_ptr_offset = fetch_bytes_in_page(
+          page: page,
+          offset: first_offset + cell_pointer_offset,
+          length: 2,
+        ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
         # (4-byte integer) Page number of left child
         @file.seek(file_offset_from_page_offset(page_index, left_child_ptr_offset))
@@ -153,15 +176,23 @@ class DatabaseFileScanner
         return ret if searching_key < key
       end
 
-      @file.seek(self.file_offset_from_page_offset(page_index, first_offset + RIGHTMOST_CHILD_POINTER_OFFSET_IN_INTERIOR_PAGE))
-      rightmost_child_page_index = @file.read(RIGHTMOST_CHILD_POINTER_LENGTH_IN_INTERIOR_PAGE).unpack("N")[0] # N: big endian unsigned 32bit
+      rightmost_child_page_index = fetch_rightmost_child_page_index(
+        page: page,
+        offset: first_offset + RIGHTMOST_CHILD_POINTER_OFFSET_IN_INTERIOR_PAGE,
+        length: RIGHTMOST_CHILD_POINTER_LENGTH_IN_INTERIOR_PAGE
+      ).unpack("N")[0] # N: big endian unsigned 32bit
+
       ret << rightmost_child_page_index
       ret
     end
 
-    def file_offset_from_page_offset(page_index, page_offset)
-      # pages are 1-indexed
-      @page_size * (page_index - 1) + page_offset
+    def fetch_page(page_index:)
+      @file.seek(@page_size * (page_index - 1))
+      @file.read(@page_size)
+    end
+
+    def fetch_bytes_in_page(page:, offset:, length:)
+      page[offset...(offset + length)]
     end
 
     # Returns an array of [bytes used for that value, lambda function to read from a given file]
@@ -191,6 +222,11 @@ class DatabaseFileScanner
         9 => [0, lambda{|_file| 1}]
       }
       mapping.fetch(serial_type)
+    end
+
+    def file_offset_from_page_offset(page_index, page_offset)
+    # pages are 1-indexed
+    @page_size * (page_index - 1) + page_offset
     end
   end
 end
