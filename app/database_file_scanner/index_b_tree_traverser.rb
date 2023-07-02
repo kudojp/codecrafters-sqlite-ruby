@@ -131,8 +131,11 @@ class DatabaseFileScanner
         ).unpack("n")[0] # n: unsigned short (16-bit) in network byte order (= big-endian)
 
         # (4-byte integer) Page number of left child
-        @file.seek(file_offset_from_page_offset(page_index, left_child_ptr_offset))
-        left_child_page_index = @file.read(4).unpack("N")[0] # N: big endian unsigned 32bit
+        left_child_page_index = fetch_bytes_in_page(
+          page: page,
+          offset: first_offset + left_child_ptr_offset,
+          length: 4,
+        ).unpack("N")[0] # N: big endian unsigned 32bit
         payload_size_offset = left_child_ptr_offset + 4
 
         # (varint) Number of bytes of payload
@@ -149,9 +152,12 @@ class DatabaseFileScanner
         key_offset += 1 # I don't know what this is.
 
         ### value encoding of `key`
-        _key_byte_length, key_read_lambda = serial_type(key_serial_type)
-        @file.seek(file_offset_from_page_offset(page_index, key_offset))
-        key = @file.read(_key_byte_length)
+        key_byte_length, key_read_lambda = serial_type(key_serial_type)
+        key = fetch_bytes_in_page(
+          page: page,
+          offset: key_offset,
+          length: key_byte_length,
+        )[...key_byte_length]
 
         ## You are searching for 15, then
         #----------------------------------------
