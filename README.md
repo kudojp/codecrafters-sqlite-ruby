@@ -1,9 +1,6 @@
-# ⚠️ TODO (improvements)
+# ⚠️ TODO: Refactor.
 
-- (critical) Page (4KB) is not fetched at a time. Data is fetched from file byte by byte. So silly.
-
-
------
+---
 
 [![progress-banner](https://app.codecrafters.io/progress/sqlite/d5146cc7-8501-4af4-98c0-93a8224c3b77)](https://app.codecrafters.io/users/kudojp)
 
